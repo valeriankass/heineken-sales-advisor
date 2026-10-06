@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEINEKEN AIDDA - Rep Dashboard</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+            color: #1f2937; /* text-gray-800 */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+
+        .chart-bar-bg { background-color: #f3f4f6; border-radius: 9999px; height: 0.75rem; width: 100%; overflow: hidden;}
+        .chart-bar-fill { height: 100%; border-radius: 9999px; transition: width 1s ease-in-out; }
+        
+        /* Modal Backdrop */
+        #actionModal {
+            display: none; /* Hidden by default */
+        }
+        #actionModal.active {
+            display: flex; /* Flex to center content */
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <header class="bg-green-700 text-white shadow-md sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-inner">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#15803d"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13h-13L12 6.5z"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">HEINEKEN <span class="font-light">AIDDA</span></h1>
+                    <p class="text-xs text-green-200 uppercase tracking-widest font-semibold">Rep Action Dashboard</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 hidden sm:flex">
+                <span class="text-sm font-medium bg-green-800 px-3 py-1.5 rounded-full">Zone: Brazil South-East</span>
+                <div class="w-9 h-9 bg-green-600 rounded-full border-2 border-white flex items-center justify-center font-bold shadow-sm">
+                    RP
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 mt-8 flex flex-col gap-8">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex flex-col">
+                <span class="text-gray-500 font-semibold text-sm uppercase tracking-wide">Total Accounts Monitored</span>
+                <span class="text-3xl font-bold text-gray-800 mt-2">14,989</span>
+                <span class="text-sm text-green-600 font-medium mt-2 flex items-center gap-1">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    Full Portfolio View
+                </span>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex flex-col">
+                <span class="text-gray-500 font-semibold text-sm uppercase tracking-wide">High / Critical Risk</span>
+                <span class="text-3xl font-bold text-orange-600 mt-2">3,842</span>
+                <span class="text-sm text-gray-500 font-medium mt-2">Score > 50 (Freq + Cat + Rev + Serv)</span>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex flex-col">
+                <span class="text-gray-500 font-semibold text-sm uppercase tracking-wide">Lost Accounts (>90 Days)</span>
+                <span class="text-3xl font-bold text-red-600 mt-2">761</span>
+                <span class="text-sm text-gray-500 font-medium mt-2">Confirmed Churn (Exclude from Risk)</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Donut Chart Container -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-bold text-lg text-gray-800 mb-6">Composite Risk Score Distribution</h3>
+                <div class="flex flex-col items-center justify-center" id="donutChartContainer">
+                    <!-- SVG injected by JS -->
+                </div>
+                <p class="text-center text-sm text-gray-500 mt-4 px-4 sm:px-8">Based on the 100-point Churn Risk Score across all active accounts.</p>
+            </div>
+            
+            <!-- Bar Chart Container -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
+                <h3 class="font-bold text-lg text-gray-800 mb-6">Top Value Leaks (Dropped Categories)</h3>
+                <div class="flex-1 flex flex-col justify-center" id="barChartContainer">
+                    <!-- Bars injected by JS -->
+                </div>
+                <p class="text-center text-sm text-gray-500 mt-4">Calculated across all 14,989 accounts.</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50/50">
+                <div>
+                    <h3 class="font-bold text-lg text-gray-800">Priority Action Queue</h3>
+                    <p class="text-sm text-gray-500 mt-1">Accounts ranked by Composite Risk Score.</p>
+                </div>
+                <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors w-full sm:w-auto">
+                    Filter Route
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider font-semibold border-b border-gray-100">
+                            <th class="p-4 pl-6">Account Details</th>
+                            <th class="p-4">Risk Score Breakdown</th>
+                            <th class="p-4">Risk Level</th>
+                            <th class="p-4 pr-6 text-right">Recommended Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm" id="tableBody">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="actionModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in relative">
+            <div class="bg-green-700 p-6 text-white flex justify-between items-start">
+                <div>
+                    <h2 class="text-xl font-bold">AIDDA Action Plan</h2>
+                    <p class="text-green-100 text-sm opacity-90 mt-1" id="modalSubtitle">Account: A00000</p>
+                </div>
+                <button onclick="closeModal()" class="text-white hover:bg-green-600 p-1 rounded-lg transition-colors focus:outline-none">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="p-6 flex flex-col gap-5">
+                <div class="flex gap-3 items-start p-4 bg-orange-50 border border-orange-100 rounded-xl">
+                    <svg class="text-orange-500 shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    <div>
+                        <h3 class="font-semibold text-orange-800 text-sm uppercase tracking-wider mb-1">Risk Factors Identifed</h3>
+                        <p class="text-orange-900 font-medium" id="modalTriggers">Multiple triggers.</p>
+                        <p class="text-orange-700 text-sm mt-1 font-semibold">Total Score: <span id="modalScore">0</span>/100</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-2">Recommended Next Best Action</h3>
+                    <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl relative">
+                        <span id="modalActionBadge" class="absolute top-3 right-3 text-xs bg-gray-200 text-gray-800 px-2 py-1 rounded-md font-bold">Action</span>
+                        <p class="text-sm text-gray-600 italic" id="modalScript">"Script goes here..."</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-2">
+                    <button onclick="closeModal()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-medium transition-colors shadow-sm">
+                        Log Interaction
+                    </button>
+                    <button onclick="closeModal()" class="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 rounded-lg font-medium transition-colors shadow-sm">
+                        Snooze Alert
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data derived from analysis for 14,989 accounts
+        // Total Accounts: 14,989. Lost (>90d): 761. Active: 14,228
+        const ACCOUNT_HEALTH = {
+            low: 7114,     // Score 0-24
+            medium: 3272,  // Score 25-49
+            high: 2561,    // Score 50-74
+            critical: 1281 // Score 75-100
+        };
+        const LOST_ACCOUNTS = 761; // Kept separate as per rules
+
+        const DROPPED_CATEGORIES = [
+            { name: 'Small Appliances', value: 7407, color: '#f97316' }, // orange-500
+            { name: 'Health & Beauty', value: 3747, color: '#eab308' }, // yellow-500
+            { name: 'Sports Leisure', value: 3655, color: '#3b82f6' }, // blue-500
+            { name: 'Cool Stuff', value: 3418, color: '#a855f7' }, // purple-500
+            { name: 'Watches & Gifts', value: 3045, color: '#ec4899' }, // pink-500
+        ];
+
+        // Sample accounts scored according to the new logic
+        const PRIORITIZED_ACCOUNTS = [
+            { 
+                id: 'A02435', location: 'Belo Horizonte, MG',
+                f: 30, c: 10, r: 30, s: 10, total: 80, risk: 'Critical',
+                triggerDesc: '3x cycle break, >70% revenue drop, poor reviews.',
+                actionType: 'Service & Pricing Intervention', badgeClass: 'bg-red-100 text-red-800',
+                script: '"Hi, I see you’ve drastically reduced your orders and had delivery issues recently. I’d like to waive freight on your next order and review our pricing tiers to get you back on track. Can we talk?"'
+            },
+            { 
+                id: 'A28970', location: 'São Paulo, SP',
+                f: 20, c: 15, r: 20, s: 0, total: 55, risk: 'High',
+                triggerDesc: 'Dropped 3 core categories, 55% revenue decline.',
+                actionType: 'Win-Back Bundle', badgeClass: 'bg-orange-100 text-orange-800',
+                script: '"Hi there! I noticed you stopped ordering Small Appliances and Cool Stuff. If you add them back to your regular order this week, I can apply a 10% bundle discount across those categories."'
+            },
+            { 
+                id: 'A35501', location: 'Rio de Janeiro, RJ',
+                f: 10, c: 5, r: 15, s: 15, total: 45, risk: 'Medium',
+                triggerDesc: 'Very poor reviews, moderate revenue decline.',
+                actionType: 'Service Recovery', badgeClass: 'bg-yellow-100 text-yellow-800',
+                script: '"I saw your recent negative reviews regarding missing items. I apologize for that experience. I want to offer a credit for the missing value plus 5% off your next invoice to make it right."'
+            },
+            { 
+                id: 'A13212', location: 'Curitiba, PR',
+                f: 0, c: 15, r: 0, s: 5, total: 20, risk: 'Low',
+                triggerDesc: 'Dropped 1 category, but overall rhythm and revenue stable.',
+                actionType: 'AI Follow-up Scheduled', badgeClass: 'bg-blue-100 text-blue-800',
+                script: 'AIDDA will trigger an automated AI voice agent to check in.\n\n"Hello, this is the HEINEKEN support team. We noticed you haven\'t ordered Cool Stuff recently. Is there anything we can help you with today?"'
+            }
+        ];
+
+        function renderDonutChart() {
+            const data = ACCOUNT_HEALTH;
+            const totalActive = data.low + data.medium + data.high + data.critical;
+            
+            // Calculate percentages
+            const lowPct = (data.low / totalActive) * 100;
+            const medPct = (data.medium / totalActive) * 100;
+            const highPct = (data.high / totalActive) * 100;
+            const critPct = (data.critical / totalActive) * 100;
+            
+            const radius = 40;
+            const circ = 2 * Math.PI * radius;
+            
+            const lowStroke = (lowPct / 100) * circ;
+            const medStroke = (medPct / 100) * circ;
+            const highStroke = (highPct / 100) * circ;
+            const critStroke = (critPct / 100) * circ;
+
+            // Colors: Low (Green), Med (Yellow), High (Orange), Critical (Red)
+            const svg = `
+                <svg width="160" height="160" viewBox="0 0 100 100" class="transform -rotate-90">
+                    <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#f3f4f6" stroke-width="15" />
+                    <!-- Low -->
+                    <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#16a34a" stroke-width="15" stroke-dasharray="${lowStroke} ${circ}" />
+                    <!-- Medium -->
+                    <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#eab308" stroke-width="15" stroke-dasharray="${medStroke} ${circ}" stroke-dashoffset="-${lowStroke}" />
+                    <!-- High -->
+                    <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#f97316" stroke-width="15" stroke-dasharray="${highStroke} ${circ}" stroke-dashoffset="-${lowStroke + medStroke}" />
+                    <!-- Critical -->
+                    <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#dc2626" stroke-width="15" stroke-dasharray="${critStroke} ${circ}" stroke-dashoffset="-${lowStroke + medStroke + highStroke}" />
+                </svg>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs font-medium text-gray-600">
+                    <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-600"></span> Low (0-24)</div>
+                    <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Med (25-49)</div>
+                    <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-orange-500"></span> High (50-74)</div>
+                    <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-600"></span> Crit (75-100)</div>
+                </div>
+            `;
+            document.getElementById('donutChartContainer').innerHTML = svg;
+        }
+
+        function renderBarChart() {
+            const data = DROPPED_CATEGORIES;
+            const maxVal = Math.max(...data.map(d => d.value));
+            
+            let html = '<div class="w-full flex flex-col gap-4">';
+            data.forEach(item => {
+                const widthPct = (item.value / maxVal) * 100;
+                html += `
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex justify-between text-xs font-semibold text-gray-700">
+                            <span>${item.name}</span>
+                            <span>R$ ${item.value.toLocaleString()}</span>
+                        </div>
+                        <div class="chart-bar-bg">
+                            <div class="chart-bar-fill" style="width: ${widthPct}%; background-color: ${item.color};"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            document.getElementById('barChartContainer').innerHTML = html;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            let html = '';
+            
+            PRIORITIZED_ACCOUNTS.forEach((acc, index) => {
+                // Determine Risk Pill Color
+                let riskClass = '';
+                if (acc.risk === 'Critical') riskClass = 'bg-red-100 text-red-800';
+                else if (acc.risk === 'High') riskClass = 'bg-orange-100 text-orange-800';
+                else if (acc.risk === 'Medium') riskClass = 'bg-yellow-100 text-yellow-800';
+                else riskClass = 'bg-green-100 text-green-800';
+
+                html += `
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="p-4 pl-6">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-gray-800 text-base">${acc.id}</span>
+                                <span class="text-gray-500 text-xs">${acc.location}</span>
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <div class="flex flex-col gap-1 text-xs text-gray-600">
+                                <div class="flex justify-between w-32"><span>Freq:</span><span class="font-medium">${acc.f}/40</span></div>
+                                <div class="flex justify-between w-32"><span>Cat Drop:</span><span class="font-medium">${acc.c}/15</span></div>
+                                <div class="flex justify-between w-32"><span>Rev Drop:</span><span class="font-medium">${acc.r}/30</span></div>
+                                <div class="flex justify-between w-32"><span>Service:</span><span class="font-medium">${acc.s}/15</span></div>
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <div class="flex flex-col items-start gap-1">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${riskClass}">
+                                    ${acc.risk} (${acc.total})
+                                </span>
+                            </div>
+                        </td>
+                        <td class="p-4 pr-6 text-right">
+                            <button onclick='openModal(${JSON.stringify(acc)})' 
+                                class="px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm ${
+                                    acc.risk === 'Low'
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                }">
+                                ${acc.risk === 'Low' ? 'View AI Flow' : 'Generate Action'}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function openModal(accountData) {
+            document.getElementById('modalSubtitle').innerText = `Account: ${accountData.id} • ${accountData.location}`;
+            document.getElementById('modalTriggers').innerText = accountData.triggerDesc;
+            document.getElementById('modalScore').innerText = accountData.total;
+            
+            const badge = document.getElementById('modalActionBadge');
+            badge.innerText = accountData.actionType;
+            badge.className = `absolute top-3 right-3 text-xs px-2 py-1 rounded-md font-bold ${accountData.badgeClass}`;
+            
+            // Format script to handle newlines for the AI text
+            document.getElementById('modalScript').innerHTML = accountData.script.replace(/\n/g, '<br>');
+            
+            document.getElementById('actionModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('actionModal').classList.remove('active');
+        }
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            renderDonutChart();
+            renderBarChart();
+            renderTable();
+        });
+    </script>
+</body>
+</html>
