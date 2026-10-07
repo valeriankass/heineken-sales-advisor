@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HEINEKEN Proactive Sales Advisor</title>
+    <title>PULSE</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -37,16 +37,15 @@
         /* Risk breakdown: stacked score bar + per-component meters */
         .stack { display: flex; height: 0.5rem; width: 100%; border-radius: 9999px; overflow: hidden; background: #f3f4f6; gap: 2px; }
         .stack > span { height: 100%; }
-        .meter { height: 0.25rem; border-radius: 9999px; background: #f3f4f6; overflow: hidden; }
-        .meter > span { display: block; height: 100%; border-radius: 9999px; }
-
+        
         /* Status Pills */
         .status-pill { display: inline-flex; items-center; padding: 0.125rem 0.5rem; border-radius: 0.375rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid transparent; }
         .status-not-started { background-color: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
-        .status-in-progress { background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+        .status-waiting-response { background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
         .status-in-review { background-color: #fdf4ff; color: #c026d3; border-color: #f5d0fe; }
         .status-completed { background-color: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
         .status-snoozed { background-color: #fefce8; color: #ca8a04; border-color: #fef08a; }
+        .status-lost { background-color: #fef2f2; color: #dc2626; border-color: #fecaca; }
 
         @media (prefers-reduced-motion: reduce) {
             .animate-fade-in, .animate-slide-up, .typing span { animation: none; }
@@ -56,6 +55,7 @@
 </head>
 <body class="min-h-screen pb-12">
 
+    <!-- ===================== HEADER ===================== -->
     <header class="bg-green-700 text-white shadow-md sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3 cursor-pointer" onclick="showDashboard()">
@@ -63,8 +63,8 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="#15803d"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13h-13L12 6.5z"/></svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight">HEINEKEN <span class="font-light">Sales Advisor</span></h1>
-                    <p class="text-xs text-green-200 uppercase tracking-widest font-semibold">Proactive Rep Dashboard</p>
+                    <h1 class="text-2xl font-bold tracking-tight">PULSE <span class="font-light text-xl opacity-90">Sales Advisor</span></h1>
+                    <p class="text-xs text-green-200 uppercase tracking-widest font-semibold">Spot risk. Act Early.</p>
                 </div>
             </div>
             <div class="flex items-center gap-4 hidden sm:flex">
@@ -91,7 +91,7 @@
             <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex flex-col">
                 <span class="text-gray-500 font-semibold text-sm uppercase tracking-wide">High / Critical Risk</span>
                 <span class="text-3xl font-bold text-orange-600 mt-2">561</span>
-                <span class="text-sm text-gray-500 font-medium mt-2">Score > 50 (Freq + Cat + Rev + Serv)</span>
+                <span class="text-sm text-gray-500 font-medium mt-2">Score > 50</span>
             </div>
             <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex flex-col">
                 <span class="text-gray-500 font-semibold text-sm uppercase tracking-wide">Lost Accounts (>90 Days)</span>
@@ -126,11 +126,7 @@
                     
                     <div class="flex items-center gap-2">
                         <select id="statusFilter" onchange="applyFilters()" class="text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-md py-1.5 px-2 shadow-sm outline-none focus:border-green-500">
-                            <option value="All">All Statuses</option>
-                            <option value="Not started">Not Started</option>
-                            <option value="In progress">In Progress</option>
-                            <option value="In review">In Review</option>
-                            <option value="Completed">Completed</option>
+                            <!-- Options injected by JS to include dynamic counts -->
                         </select>
                         
                         <div class="flex bg-gray-200/60 p-1 rounded-lg" id="filterContainer">
@@ -171,7 +167,6 @@
         <!-- Breadcrumb & Header -->
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div class="flex items-start gap-4">
-                <!-- Back Arrow Button -->
                 <button onclick="showDashboard()" class="mt-1 shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-green-700 transition-colors shadow-sm focus:outline-none" aria-label="Go back to dashboard">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
@@ -218,7 +213,7 @@
                         <!-- Customer Profile -->
                         <div class="flex-1 w-full bg-gray-50 border border-gray-100 rounded-xl p-4 flex flex-col">
                             <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Customer Profile & Behavior</h4>
-                            <ul id="ctxPreferences" class="text-sm text-gray-700 flex flex-col gap-2.5 list-disc pl-4 marker:text-green-600 flex-1">
+                            <ul id="ctxPreferences" class="text-sm text-gray-700 flex flex-col gap-2 list-disc pl-4 marker:text-green-600 flex-1">
                                 <!-- Injected by JS -->
                             </ul>
                         </div>
@@ -229,7 +224,7 @@
                                 <svg class="text-orange-500 shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                                 <h4 class="font-semibold text-orange-800 text-xs uppercase tracking-wider">Primary Pain Point</h4>
                             </div>
-                            <p class="text-orange-900 text-sm font-medium" id="ctxTrigger">Description of why this account was flagged.</p>
+                            <p class="text-orange-900 text-sm font-medium leading-relaxed" id="ctxTrigger">Description of why this account was flagged.</p>
                         </div>
                     </div>
                 </div>
@@ -262,8 +257,22 @@
                             </div>
                         </div>
 
-                        <div>
-                            <h4 class="font-semibold text-gray-800 text-sm mb-2">Suggested Script / Message</h4>
+                        <!-- Rep Strategy: Talking Points & Persuasion (Human Only) -->
+                        <div id="humanStrategySection" style="display: none;">
+                            <h4 class="font-semibold text-gray-800 text-sm mb-3">Rep Strategy: Key Talking Points</h4>
+                            <ul id="modalTalkingPoints" class="text-sm text-gray-700 flex flex-col gap-2 list-disc pl-4 marker:text-green-600 mb-5">
+                                <!-- Injected via JS -->
+                            </ul>
+                            
+                            <h4 class="font-semibold text-gray-800 text-sm mb-3">Recommended Persuasion Techniques</h4>
+                            <ul id="modalTechniques" class="text-sm text-gray-700 flex flex-col gap-2 list-none mb-1">
+                                <!-- Injected via JS -->
+                            </ul>
+                        </div>
+
+                        <!-- Auto Script Section (AI Only) -->
+                        <div id="autoScriptSection" style="display: none;">
+                            <h4 class="font-semibold text-gray-800 text-sm mb-2">Automated Script / Message</h4>
                             <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl relative">
                                 <p class="text-sm text-gray-600 italic" id="modalScript">"Script goes here..."</p>
                             </div>
@@ -275,11 +284,19 @@
                                 <div>
                                     <h5 class="font-bold text-sm mb-1 text-gray-800">1. Make the Call & Log Outcome</h5>
                                     <p class="text-[11px] text-gray-500 mb-3">You own this relationship. Record the result below to close the case.</p>
-                                    <select id="humanOutcomeSelect" class="w-full text-sm mb-2 p-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-green-500 shadow-sm cursor-pointer">
+                                    
+                                    <select id="humanOutcomeSelect" onchange="toggleRevenueInput()" class="w-full text-sm mb-2 p-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-green-500 shadow-sm cursor-pointer">
                                         <option value="Completed">Success - Order Placed / Resolved</option>
-                                        <option value="Snoozed">Snoozed - Follow up later</option>
+                                        <option value="Waiting Response">Waiting Response - Left Message / Awaiting Reply</option>
                                         <option value="In review">Escalated - Needs Manager Review</option>
+                                        <option value="Snoozed">Snoozed - Follow up later</option>
+                                        <option value="Lost">Lost - Customer Churned</option>
                                     </select>
+                                    
+                                    <div id="revenueInputContainer" style="display: block;" class="mb-2">
+                                        <input type="number" id="humanRevenueInput" class="w-full text-sm p-2.5 rounded-lg border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500 shadow-sm" placeholder="Revenue Generated (R$)...">
+                                    </div>
+                                    
                                     <textarea id="humanNotes" rows="2" class="w-full text-sm p-2.5 rounded-lg border border-gray-300 mb-3 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500 shadow-sm" placeholder="Brief call notes..."></textarea>
                                 </div>
                                 <button onclick="logHumanInteraction()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
@@ -327,8 +344,8 @@
             <!-- Right Column: Final Outcome -->
             <div class="flex flex-col gap-6">
                 <div id="outcomeCard" class="hidden bg-white rounded-2xl shadow-sm border border-green-200 overflow-hidden animate-slide-up">
-                    <div class="bg-green-700 text-white p-5">
-                        <span class="text-green-200 font-semibold text-xs uppercase tracking-widest">Outcome</span>
+                    <div class="bg-green-700 text-white p-5" id="outcomeCardHeader">
+                        <span class="text-green-200 font-semibold text-xs uppercase tracking-widest" id="outcomeCardSubtext">Outcome</span>
                         <p class="text-xl font-bold mt-1" id="outHeadline">Action completed</p>
                     </div>
                     <div class="p-5 flex flex-col gap-3 text-sm" id="outRows"></div>
@@ -343,7 +360,7 @@
                         <button onclick="showDashboard()" class="text-xs text-gray-500 hover:text-gray-700 font-medium">Back to Queue</button>
                     </div>
                 </div>
-                <p class="text-xs text-gray-400 px-2" id="prototypeNotice">Prototype Note: The agent run below is simulated using demo data to demonstrate how the recommended action is executed end-to-end.</p>
+                <p class="text-xs text-gray-400 px-2" id="prototypeNotice">Prototype Note: The AI agent run below is simulated using demo data to demonstrate how the recommended action is executed end-to-end.</p>
             </div>
         </div>
     </main>
@@ -388,7 +405,6 @@
 
         function generateMassiveDataset() {
             const cities = ['São Paulo, SP', 'Rio de Janeiro, RJ', 'Belo Horizonte, MG', 'Salvador, BA', 'Curitiba, PR', 'Campinas, SP', 'Porto Alegre, RS', 'Brasilia, DF', 'Fortaleza, CE', 'Manaus, AM'];
-            const prefOptions = ['Prefers WhatsApp comms', 'Usually orders on Mondays', 'Top category: Core Lagers', 'Price sensitive on freight', 'Frequent bulk buyer', 'Responds well to bundles', 'Values guaranteed slots'];
             const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
             let uid = 0;
 
@@ -404,22 +420,80 @@
                         total = f + c + r + s;
                     } while (total < minScore || total > maxScore);
 
-                    let triggerDesc, actionType, badgeClass, script, rationale;
-                    const prefs = [prefOptions[randomInt(0, 2)], prefOptions[randomInt(3, 6)]];
+                    let triggerDesc, actionType, badgeClass, script, rationale, talkingPoints, persuasionTechniques;
                     const dropCat = DROPPED_CATEGORIES[randomInt(0, DROPPED_CATEGORIES.length - 1)].name;
+                    const city = cities[randomInt(0, cities.length - 1)];
+                    
+                    const usualOrder = randomInt(8, 45) * 100;
+                    const daysSilent = riskLevel === 'Low' ? randomInt(12, 25) : randomInt(30, 120);
+                    const usualGap = randomInt(10, 30);
+                    
+                    const r_pct = r / 30; 
+                    const dropAmount = Math.round(usualOrder * (r_pct + 0.1)); 
+                    const currentOrder = Math.max(0, usualOrder - dropAmount);
 
                     if (riskLevel === 'Critical') {
                         badgeClass = 'bg-red-100 text-red-800';
                         actionType = randomInt(0, 1) === 0 ? 'Urgent Win-Back' : 'Service & Pricing Intervention';
-                        triggerDesc = f > 20 ? 'Massive rhythm break, >70% revenue drop.' : 'Very poor reviews, dropped core categories.';
+                        triggerDesc = f > 20 
+                            ? `Massive rhythm break: Silent for ${daysSilent} days (usually orders every ${usualGap} days). Order volume has plummeted, representing a monthly leak of ${fmtR(dropAmount)}.`
+                            : `Critical service failure: 2 recent deliveries delayed by 5+ days resulting in 1-star reviews. They have completely stopped buying ${dropCat}.`;
                         script = '"Hi, I see you’ve drastically reduced your orders recently. I’d like to review our pricing tiers and offer a 15% discount on your next invoice to get you back on track."';
                         rationale = f > 20 ? "A 15% discount matches typical competitor win-back offers and directly offsets their perceived volume decline." : "A price tier review directly addresses their dissatisfaction and prevents complete brand abandonment.";
+                        
+                        if (f > 20) {
+                            talkingPoints = [
+                                "Acknowledge the noticeable drop in their order volume directly and ask for candid feedback.",
+                                "Introduce the temporary 15% discount as a way to support their margins immediately.",
+                                "Propose a formal review of their pricing tier to secure a better long-term agreement."
+                            ];
+                            persuasionTechniques = [
+                                "<li><strong class='text-gray-800'>Reciprocity:</strong> By offering a 15% discount upfront without them asking, they are more likely to engage in a constructive dialogue.</li>",
+                                "<li><strong class='text-gray-800'>Loss Aversion:</strong> Gently highlight the lost revenue on their end by not having the full HEINEKEN portfolio in stock for their customers.</li>"
+                            ];
+                        } else {
+                            talkingPoints = [
+                                "Start with a direct, unqualified apology for the recent delayed deliveries.",
+                                "Explain exactly what has been done internally (escalated to carrier, priority slots enabled) so they know it's permanently fixed.",
+                                "Offer the 10% service credit as a tangible token of our commitment to their business."
+                            ];
+                            persuasionTechniques = [
+                                "<li><strong class='text-gray-800'>Extreme Ownership:</strong> Taking full accountability builds massive trust compared to blaming the delivery carrier.</li>",
+                                "<li><strong class='text-gray-800'>Service Recovery Paradox:</strong> Customers whose problems are resolved swiftly often become more loyal than those who never experienced an issue.</li>"
+                            ];
+                        }
+
                     } else if (riskLevel === 'High') {
                         badgeClass = 'bg-orange-100 text-orange-800';
                         actionType = c > 5 ? 'Win-Back Bundle' : 'Service Recovery';
-                        triggerDesc = c > 5 ? `Dropped ${dropCat}, overall revenue declining.` : 'Service complaints noted with declining volume.';
+                        triggerDesc = c > 5 
+                            ? `High flight risk: Dropped ${dropCat} for over ${daysSilent} days (previously ordered 4+ times). Overall monthly spend is down by ${fmtR(dropAmount)}.` 
+                            : `Service-driven decline: Multiple complaints logged in the last 60 days alongside a ~${Math.round(r_pct*100)}% decrease in regular order volume.`;
                         script = '"I noticed we let you down on delivery and you stopped ordering some usual items. I have a credit ready for you to make up for the bad experience."';
                         rationale = c > 5 ? `Bundling ${dropCat} reintroduces the category without permanently discounting their core basket.` : "A service credit acknowledges our logistical failure and restores goodwill instantly without lowering baseline pricing.";
+                        
+                        if (c > 5) {
+                            talkingPoints = [
+                                `Mention that you noticed they haven't stocked ${dropCat} recently.`,
+                                `Share a quick insight about how ${dropCat} is performing very well in ${city.split(',')[0]} right now.`,
+                                `Offer the bundle deal (10% off the category + free delivery) to make it risk-free for them to try again.`
+                            ];
+                            persuasionTechniques = [
+                                "<li><strong class='text-gray-800'>Social Proof:</strong> Mentioning local trends reassures them that other similar venues are succeeding with this product.</li>",
+                                "<li><strong class='text-gray-800'>Risk Reversal:</strong> The discount and free delivery completely removes the financial hesitation of restocking a dropped item.</li>"
+                            ];
+                        } else {
+                            talkingPoints = [
+                                "Reference the specific complaints and delays they experienced recently.",
+                                "Confirm that their account has been flagged for priority routing to prevent a recurrence.",
+                                "Apply the 8% apology credit to their next order to smooth over the recent friction."
+                            ];
+                            persuasionTechniques = [
+                                "<li><strong class='text-gray-800'>Empathy & Validation:</strong> Ensure they feel completely heard before moving to the solution.</li>",
+                                "<li><strong class='text-gray-800'>Commitment & Consistency:</strong> Once they agree that reliable delivery is their main concern, assure them we've committed to exactly that standard moving forward.</li>"
+                            ];
+                        }
+
                     } else if (riskLevel === 'Medium') {
                         badgeClass = 'bg-yellow-100 text-yellow-800';
                         const mainDriverKey = [
@@ -429,35 +503,47 @@
 
                         if (mainDriverKey === 'c') {
                             actionType = 'Targeted Category Promo';
-                            triggerDesc = 'Moderate risk driven primarily by dropped categories.';
+                            triggerDesc = `Moderate risk: They stopped adding ${dropCat} to their cart. This category usually accounts for ~15% of their basket.`;
                             script = `The system will automatically send a targeted WhatsApp message:\n\n"Olá! We noticed you haven't ordered ${dropCat} recently. We have a special promo this week if you want to add it back to your regular list."`;
                         } else if (mainDriverKey === 'r') {
                             actionType = 'Volume & Revenue Check-in';
-                            triggerDesc = 'Moderate risk driven by declining revenue and volume.';
+                            triggerDesc = `Moderate risk: Total revenue has dropped by ~${Math.round(r_pct*100)}% due to lower overall volume. Currently ordering ${fmtR(currentOrder)} vs usual ${fmtR(usualOrder)}.`;
                             script = `The system will automatically trigger a voice agent check-in:\n\n"Hello, this is the HEINEKEN support team. We were reviewing your account and noticed that your overall order volume has dipped, leading to a drop in your usual spend. We want to make sure everything is okay. Is there anything we can help adjust?"`;
                         } else {
                             actionType = 'Rhythm Check-in';
-                            triggerDesc = 'Moderate risk driven by delayed ordering cycle or service.';
+                            triggerDesc = `Moderate risk: Delayed ordering cycle. Currently at ${daysSilent} days since last order (usually ${usualGap} days).`;
                             script = `The system will automatically send a targeted message:\n\n"Hi there, just checking in as your usual order cycle seems a bit delayed. Let us know if you need help with your next delivery."`;
                         }
                         rationale = "Targeted messaging keeps HEINEKEN top-of-mind and corrects behavior before it escalates to High risk.";
                     } else {
                         badgeClass = 'bg-blue-100 text-blue-800';
                         actionType = 'AI Follow-up Scheduled';
-                        triggerDesc = 'Slight delay in usual ordering cycle. Monitor closely.';
+                        triggerDesc = `Slight delay in usual ordering cycle (${daysSilent} days vs ${usualGap} days). Monitor closely.`;
                         script = 'The system will trigger an automated AI voice agent to check in.\n\n"Hello, this is the HEINEKEN support team. We noticed your usual order cycle is approaching. Is there anything we can help you with today?"';
                         rationale = "Automated check-ins prevent rhythm breaks early without costing valuable rep time.";
                     }
+                    
+                    const profileOptions = [
+                        `Avg. Historical Monthly Spend: ${fmtR(usualOrder * (30/usualGap))}`,
+                        `Avg. Basket Size: ${randomInt(8, 25)} SKUs`,
+                        `Preferred Delivery Day: ${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][randomInt(0,4)]}`,
+                        `Channel Preference: ${randomInt(0,1) === 0 ? 'WhatsApp' : 'Phone Call'}`,
+                        `Top Category: Core Lagers (${randomInt(40, 70)}% of volume)`,
+                        `Price Sensitivity: ${randomInt(0,1) === 0 ? 'High (Responds well to promos)' : 'Low (Prioritizes stock availability)'}`
+                    ];
+                    
+                    const prefs = profileOptions.sort(() => 0.5 - Math.random()).slice(0, 4);
 
                     accounts.push({
                         uid: uid++,
                         id: 'A' + randomInt(10000, 99999),
-                        location: cities[randomInt(0, cities.length - 1)],
+                        location: city,
                         f, c, r, s, total, risk: riskLevel,
-                        triggerDesc, actionType, badgeClass, script, rationale, preferences: prefs,
-                        usualOrder: randomInt(8, 45) * 100,
-                        daysSilent: riskLevel === 'Low' ? randomInt(12, 25) : randomInt(30, 120),
-                        usualGap: randomInt(10, 30),
+                        triggerDesc, actionType, badgeClass, script, rationale, 
+                        talkingPoints, persuasionTechniques, preferences: prefs,
+                        usualOrder: usualOrder,
+                        daysSilent: daysSilent,
+                        usualGap: usualGap,
                         droppedCat: dropCat,
                         status: 'Not started', run: null, offerString: ''
                     });
@@ -486,11 +572,39 @@
                }
             });
 
+            updateFilterCounts();
             applyFilters();
         }
 
         const byUid = uid => ALL_ACCOUNTS.find(a => a.uid === uid);
         const fmtR = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+
+        function updateFilterCounts() {
+            const counts = { 'All': 0, 'Not started': 0, 'Waiting Response': 0, 'In review': 0, 'Completed': 0, 'Snoozed': 0, 'Lost': 0 };
+            const selectEl = document.getElementById('statusFilter');
+            const currentSelected = selectEl.value || 'All'; // Save current selection
+            
+            const riskFilteredAccounts = ALL_ACCOUNTS.filter(acc => currentFilter === 'All' || acc.risk === currentFilter);
+            
+            riskFilteredAccounts.forEach(acc => {
+                counts['All']++;
+                if (counts[acc.status] !== undefined) {
+                    counts[acc.status]++;
+                }
+            });
+
+            selectEl.innerHTML = `
+                <option value="All">All Statuses (${counts['All']})</option>
+                <option value="Not started">Not Started (${counts['Not started']})</option>
+                <option value="Waiting Response">Waiting Response (${counts['Waiting Response']})</option>
+                <option value="In review">In Review (${counts['In review']})</option>
+                <option value="Completed">Completed (${counts['Completed']})</option>
+                <option value="Snoozed">Snoozed (${counts['Snoozed']})</option>
+                <option value="Lost">Lost (${counts['Lost']})</option>
+            `;
+            
+            selectEl.value = currentSelected; // Restore selection
+        }
 
         function setFilter(filterVal) {
             currentFilter = filterVal;
@@ -502,10 +616,11 @@
                 btn.classList.toggle('text-gray-500', !on);
                 btn.classList.toggle('hover:text-gray-700', !on);
             });
+            updateFilterCounts();
             applyFilters();
         }
         
-        function applyFilters() {
+        function applyFilters(preserveCount = false) {
             const statusVal = document.getElementById('statusFilter').value;
             filteredData = ALL_ACCOUNTS.filter(acc => {
                 const riskMatch = currentFilter === 'All' || acc.risk === currentFilter;
@@ -514,13 +629,13 @@
             });
 
             filteredData.sort((a, b) => {
-                const aDone = a.status === 'Completed' || a.status === 'Snoozed';
-                const bDone = b.status === 'Completed' || b.status === 'Snoozed';
+                const aDone = a.status === 'Completed' || a.status === 'Snoozed' || a.status === 'Lost';
+                const bDone = b.status === 'Completed' || b.status === 'Snoozed' || b.status === 'Lost';
                 if (aDone !== bDone) return aDone ? 1 : -1;
                 return b.total - a.total; 
             });
 
-            visibleCount = 20; 
+            if (preserveCount !== true) visibleCount = 20; 
             renderTable();
         }
 
@@ -581,21 +696,16 @@
                 `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${c.color}"></span>${c.short}</span>`).join('');
         }
 
-        function mainDriver(acc) {
-            return COMPONENTS.slice().sort((a, b) => (acc[b.key] / b.max) - (acc[a.key] / a.max))[0];
-        }
-
         function breakdownHTML(acc, size = 'compact') {
             const stack = COMPONENTS.filter(c => acc[c.key] > 0).map(c =>
                 `<span title="${c.label}: ${acc[c.key]}/${c.max}" style="width:${(acc[c.key]/100)*100}%; background:${c.color}"></span>`).join('');
-            const driver = mainDriver(acc);
+            
             const rows = COMPONENTS.map(c => {
                 const pct = (acc[c.key] / c.max) * 100;
-                const isDriver = c.key === driver.key && acc[c.key] > 0;
                 return `
                     <div class="flex flex-col gap-1">
                         <div class="flex justify-between items-center ${size === 'compact' ? 'text-[11px]' : 'text-sm'}">
-                            <span class="flex items-center gap-1.5 ${isDriver ? 'text-gray-800 font-bold' : 'text-gray-600 font-medium'}">
+                            <span class="flex items-center gap-1.5 text-gray-600 font-medium">
                                 <span class="w-2 h-2 rounded-full shrink-0" style="background:${c.color}"></span>${size === 'compact' ? c.short : c.label}
                             </span>
                             <span class="tabular-nums font-semibold text-gray-800 ${size === 'compact' ? '' : 'text-base'}">${acc[c.key]}<span class="text-gray-400 font-normal ${size === 'compact' ? '' : 'text-sm'}">/${c.max}</span></span>
@@ -612,7 +722,6 @@
                             <span class="tabular-nums text-xs font-bold text-gray-800 w-12 text-right">${acc.total}<span class="text-gray-400 font-medium">/100</span></span>
                         </div>
                         <div class="grid grid-cols-2 gap-x-4 gap-y-2">${rows}</div>
-                        ${acc.total > 0 ? `<span class="text-[11px] text-gray-500 mt-1">Main driver: <span class="font-semibold text-gray-700">${driver.label}</span></span>` : ''}
                     </div>`;
             } else {
                 return `
@@ -629,10 +738,11 @@
         function statusClass(status) {
             switch(status) {
                 case 'Not started': return 'status-not-started';
-                case 'In progress': return 'status-in-progress';
+                case 'Waiting Response': return 'status-waiting-response';
                 case 'In review': return 'status-in-review';
                 case 'Completed': return 'status-completed';
                 case 'Snoozed': return 'status-snoozed';
+                case 'Lost': return 'status-lost';
                 default: return 'status-not-started';
             }
         }
@@ -646,11 +756,11 @@
                 html = `<tr><td colspan="4" class="p-8 text-center text-gray-500 italic">No accounts found matching this filter.</td></tr>`;
             } else {
                 visibleData.forEach((acc) => {
-                    const done = acc.status === 'Completed';
+                    const done = acc.status === 'Completed' || acc.status === 'Lost' || acc.status === 'Snoozed';
                     const requiresHuman = acc.risk === 'Critical' || acc.risk === 'High';
                     
                     html += `
-                        <tr class="hover:bg-gray-50/50 transition-colors ${acc.status === 'Snoozed' ? 'opacity-60' : ''}">
+                        <tr class="hover:bg-gray-50/50 transition-colors ${acc.status === 'Snoozed' || acc.status === 'Lost' ? 'opacity-60' : ''}">
                             <td class="p-4 pl-6 align-top">
                                 <div class="flex flex-col">
                                     <span class="font-bold text-gray-800 text-base">${acc.id}</span>
@@ -704,23 +814,29 @@
             document.getElementById('agentView').classList.add('hidden');
             document.getElementById('agentView').classList.remove('flex');
             document.getElementById('dashboardView').classList.remove('hidden');
-            renderTable();
-            window.scrollTo({ top: 0 });
+            applyFilters(true); // Refresh table state while preserving loaded count and selected filters
         }
 
         function nextAccount() {
-            const next = filteredData.find(a => a.status === 'Not started' || a.status === 'In progress');
+            const next = filteredData.find(a => a.status === 'Not started' || a.status === 'Waiting Response');
             if (next) openAgent(next.uid);
             else showDashboard();
         }
 
-        function manualStatusUpdate() {
-            if (!currentAccount) return;
-            const val = document.getElementById('statusUpdateSelect').value;
-            if (val) {
-                currentAccount.status = val;
-                showDashboard();
-                applyFilters();
+        function toggleRevenueInput() {
+            const val = document.getElementById('humanOutcomeSelect').value;
+            const revContainer = document.getElementById('revenueInputContainer');
+            const notesArea = document.getElementById('humanNotes');
+            
+            if (val === 'Completed') {
+                revContainer.style.display = 'block';
+                notesArea.placeholder = 'Brief call notes...';
+            } else if (val === 'Lost') {
+                revContainer.style.display = 'none';
+                notesArea.placeholder = 'Reason for losing the account...';
+            } else {
+                revContainer.style.display = 'none';
+                notesArea.placeholder = 'Brief call notes...';
             }
         }
 
@@ -740,22 +856,58 @@
             document.getElementById('actionApprovalSection').style.display = 'none';
             document.getElementById('timelineSection').classList.add('hidden');
             
-            // Build pseudo-plan for the outcome card
-            const newScore = Math.max(5, Math.round(acc.total * 0.45)); // Arbitrary success drop
-            
-            document.getElementById('outHeadline').innerText = 'Manual Interaction Logged';
-            document.getElementById('outRows').innerHTML = `
-                <div class="flex justify-between gap-3"><span class="text-gray-500">Recorded Outcome</span><span class="font-semibold text-gray-800 text-right">${statusVal}</span></div>
-                <div class="flex justify-between gap-3"><span class="text-gray-500">Rep Notes</span><span class="font-semibold text-gray-800 text-right italic max-w-xs">${notesVal}</span></div>
-            `;
-            document.getElementById('outScoreText').innerText = `${acc.total} → ${newScore}`;
-            
             const card = document.getElementById('outcomeCard'); 
+            const cardHeader = document.getElementById('outcomeCardHeader');
+            const headerText = document.getElementById('outcomeCardSubtext');
+            const bar = document.getElementById('outScoreBar');
+            
+            let newScore;
+            
+            // Handle visual outcome states based on result
+            if (statusVal === 'Completed') {
+                newScore = Math.max(5, Math.round(acc.total * 0.45)); 
+                cardHeader.className = 'bg-green-700 text-white p-5';
+                headerText.className = 'text-green-200 font-semibold text-xs uppercase tracking-widest';
+                document.getElementById('outHeadline').innerText = 'Account Secured';
+                bar.className = 'chart-bar-fill bg-green-600';
+                
+                const rev = document.getElementById('humanRevenueInput').value || '0';
+                document.getElementById('outRows').innerHTML = `
+                    <div class="flex justify-between gap-3"><span class="text-gray-500">Recorded Outcome</span><span class="font-semibold text-green-700 text-right">Success</span></div>
+                    <div class="flex justify-between gap-3"><span class="text-gray-500">Revenue Generated</span><span class="font-semibold text-gray-800 text-right">R$ ${Number(rev).toLocaleString('pt-BR')}</span></div>
+                    <div class="flex justify-between gap-3"><span class="text-gray-500">Rep Notes</span><span class="font-semibold text-gray-800 text-right italic max-w-xs">${notesVal}</span></div>
+                `;
+            } else if (statusVal === 'Lost') {
+                newScore = 100; // Critical churn
+                cardHeader.className = 'bg-red-700 text-white p-5';
+                headerText.className = 'text-red-200 font-semibold text-xs uppercase tracking-widest';
+                document.getElementById('outHeadline').innerText = 'Account Churned';
+                bar.className = 'chart-bar-fill bg-red-600';
+                
+                document.getElementById('outRows').innerHTML = `
+                    <div class="flex justify-between gap-3"><span class="text-gray-500">Recorded Outcome</span><span class="font-semibold text-red-700 text-right">Lost</span></div>
+                    <div class="flex justify-between gap-3"><span class="text-gray-500">Reason / Notes</span><span class="font-semibold text-gray-800 text-right italic max-w-xs">${notesVal}</span></div>
+                `;
+            } else {
+                newScore = acc.total; // No change if snoozed/review
+                cardHeader.className = 'bg-gray-700 text-white p-5';
+                headerText.className = 'text-gray-300 font-semibold text-xs uppercase tracking-widest';
+                document.getElementById('outHeadline').innerText = 'Status Updated';
+                bar.className = 'chart-bar-fill bg-gray-600';
+                
+                document.getElementById('outRows').innerHTML = `
+                    <div class="flex justify-between gap-3"><span class="text-gray-500">Recorded Outcome</span><span class="font-semibold text-gray-800 text-right">${statusVal}</span></div>
+                    <div class="flex justify-between gap-3"><span class="text-gray-500">Rep Notes</span><span class="font-semibold text-gray-800 text-right italic max-w-xs">${notesVal}</span></div>
+                `;
+            }
+
+            document.getElementById('outScoreText').innerText = `${acc.total} → ${newScore}`;
             card.classList.remove('hidden');
             
-            const bar = document.getElementById('outScoreBar');
             bar.style.width = acc.total + '%';
             requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = newScore + '%'; }));
+            
+            updateFilterCounts();
         }
 
         function openAgent(uid) {
@@ -766,9 +918,8 @@
             if (!acc.run) acc.run = buildPlan(acc);
             
             const isHuman = acc.risk === 'Critical' || acc.risk === 'High';
-            const isCompleted = acc.status === 'Completed' || acc.status === 'Snoozed' || acc.status === 'In review';
+            const isCompleted = acc.status === 'Completed' || acc.status === 'Snoozed' || acc.status === 'In review' || acc.status === 'Lost';
 
-            // Navigation & Header updates
             document.getElementById('dashboardView').classList.add('hidden');
             const av = document.getElementById('agentView'); av.classList.remove('hidden'); av.classList.add('flex');
             window.scrollTo({ top: 0 });
@@ -779,17 +930,14 @@
             p.className = `status-pill ${statusClass(acc.status)}`;
             p.innerText = acc.status;
 
-            // Context section
             const rk = document.getElementById('ctxRisk'); 
             rk.className = `inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${RISK_CLASS[acc.risk]}`; 
             rk.innerText = `${acc.risk} (${acc.total})`;
             document.getElementById('ctxBreakdown').innerHTML = breakdownHTML(acc, 'full');
             document.getElementById('ctxTrigger').innerText = acc.triggerDesc;
             
-            // Populate Preferences
             document.getElementById('ctxPreferences').innerHTML = acc.preferences.map(p => `<li>${p}</li>`).join('');
 
-            // Display Logic based on Status
             const approvalSection = document.getElementById('actionApprovalSection');
             const timelineSection = document.getElementById('timelineSection');
             const outcomeCard = document.getElementById('outcomeCard');
@@ -799,17 +947,26 @@
             const autoControls = document.getElementById('autoExecutionControls');
 
             if (isCompleted) {
-                // If done, hide approval, show timeline immediately and fast forward
                 approvalSection.style.display = 'none';
                 timelineSection.classList.remove('hidden');
                 timelineSection.classList.add('flex');
                 executionControls.style.display = 'none';
-                agentSkip = true; // force instant render
-                setupTimeline(acc);
-                runStep(acc, 0);
+                agentSkip = true; 
+                
+                // If it was manually lost, we don't have a fake agent run to show.
+                // We just show the outcome card directly.
+                if (acc.status === 'Lost') {
+                    timelineSection.classList.add('hidden');
+                    timelineSection.classList.remove('flex');
+                } else {
+                    setupTimeline(acc);
+                    runStep(acc, 0);
+                }
             } else {
-                // Not started or in progress: show Approval, hide timeline
-                if (acc.status === 'Not started') acc.status = 'In progress';
+                if (acc.status === 'Not started') {
+                    acc.status = 'Waiting Response';
+                    updateFilterCounts(); 
+                }
                 p.className = `status-pill ${statusClass(acc.status)}`; p.innerText = acc.status;
                 
                 outcomeCard.classList.add('hidden');
@@ -818,7 +975,6 @@
                 approvalSection.style.display = 'block';
                 executionControls.style.display = 'none';
                 
-                // Populate Approval Section
                 const badge = document.getElementById('modalActionBadge');
                 badge.innerText = acc.actionType;
                 
@@ -826,12 +982,16 @@
                 const humanBadge = document.getElementById('humanBadgeContainer');
                 const offerSection = document.getElementById('offerSection');
                 
+                const humanStrategySection = document.getElementById('humanStrategySection');
+                const autoScriptSection = document.getElementById('autoScriptSection');
+                
                 document.getElementById('offerRationaleText').innerText = acc.rationale;
-                document.getElementById('modalScript').innerHTML = acc.script.replace(/\n/g, '<br>');
                 
                 // Reset manual form
                 document.getElementById('humanNotes').value = '';
+                document.getElementById('humanRevenueInput').value = '';
                 document.getElementById('humanOutcomeSelect').value = 'Completed';
+                toggleRevenueInput(); 
 
                 if (isHuman) {
                     title.innerText = 'Intervention Strategy & Execution';
@@ -839,12 +999,22 @@
                     offerSection.style.display = 'block';
                     document.getElementById('offerEditInput').value = acc.offerString;
                     
+                    humanStrategySection.style.display = 'block';
+                    autoScriptSection.style.display = 'none';
+                    
+                    document.getElementById('modalTalkingPoints').innerHTML = acc.talkingPoints.map(tp => `<li>${tp}</li>`).join('');
+                    document.getElementById('modalTechniques').innerHTML = acc.persuasionTechniques.join('');
+                    
                     humanControls.style.display = 'grid';
                     autoControls.style.display = 'none';
                 } else {
                     title.innerText = 'Review Automated Action Plan';
                     humanBadge.style.display = 'none';
                     offerSection.style.display = 'none';
+                    
+                    humanStrategySection.style.display = 'none';
+                    autoScriptSection.style.display = 'block';
+                    document.getElementById('modalScript').innerHTML = acc.script.replace(/\n/g, '<br>');
                     
                     humanControls.style.display = 'none';
                     autoControls.style.display = 'block';
@@ -859,11 +1029,9 @@
 
             if (isHuman) {
                 acc.offerString = document.getElementById('offerEditInput').value;
-                // Rebuild plan to inject edited offer string if they changed it
                 acc.run = buildPlan(acc);
             }
 
-            // Hide approval, show timeline and controls
             document.getElementById('actionApprovalSection').style.display = 'none';
             const timeline = document.getElementById('timelineSection');
             timeline.classList.remove('hidden');
@@ -912,7 +1080,7 @@
                 'Urgent Win-Back': {
                     channel: 'Outbound call · rep-assisted', headline: 'Account won back',
                     steps: [common.analyse,
-                        { title: 'Quantify value at risk', detail: `Estimated lost revenue: <b>${fmtR(lostPerMonth)}/month</b>. Main driver: ${mainDriver(acc).label}.` },
+                        { title: 'Quantify value at risk', detail: `Estimated lost revenue: <b>${fmtR(lostPerMonth)}/month</b>.` },
                         { title: 'Prepare win-back offer', detail: acc.offerString, offer: true },
                         { title: 'Call account owner', transcript: [
                             ['agent', `Hi, this is the HEINEKEN team for ${city}. We’ve missed your orders over the last few weeks. Is everything OK on your side?`],
@@ -1122,6 +1290,14 @@
             p.className = `status-pill ${statusClass(acc.status)}`;
             p.innerText = acc.status;
             
+            const cardHeader = document.getElementById('outcomeCardHeader');
+            const headerText = document.getElementById('outcomeCardSubtext');
+            const bar = document.getElementById('outScoreBar');
+            
+            cardHeader.className = 'bg-green-700 text-white p-5';
+            headerText.className = 'text-green-200 font-semibold text-xs uppercase tracking-widest';
+            bar.className = 'chart-bar-fill bg-green-600';
+
             document.getElementById('outHeadline').innerText = plan.headline;
             document.getElementById('outRows').innerHTML = plan.outcome.map(([k, v]) =>
                 `<div class="flex justify-between gap-3"><span class="text-gray-500">${k}</span><span class="font-semibold text-gray-800 text-right">${v}</span></div>`).join('');
@@ -1130,9 +1306,10 @@
             const card = document.getElementById('outcomeCard'); 
             card.classList.remove('hidden');
             
-            const bar = document.getElementById('outScoreBar');
             bar.style.width = acc.total + '%';
             requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = plan.newScore + '%'; }));
+            
+            updateFilterCounts();
             if (window.innerWidth < 1024) card.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
         }
 
@@ -1142,7 +1319,6 @@
             renderDonutChart();
             renderBarChart();
             renderLegend();
-            renderTable();
         });
     </script>
 </body>
