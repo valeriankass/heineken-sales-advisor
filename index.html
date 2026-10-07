@@ -965,10 +965,6 @@
                     runStep(acc, 0);
                 }
             } else {
-                if (acc.status === 'Not started') {
-                    acc.status = 'Waiting Response';
-                    updateFilterCounts(); 
-                }
                 p.className = `status-pill ${statusClass(acc.status)}`; p.innerText = acc.status;
                 
                 outcomeCard.classList.add('hidden');
