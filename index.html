@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* bg-gray-100 */
@@ -19,20 +19,38 @@
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
-
-        .animate-fade-in {
-            animation: fadeIn 0.2s ease-out forwards;
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes blink { 0%, 80%, 100% { opacity: .25 } 40% { opacity: 1 } }
+
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        .animate-slide-up { animation: slideUp 0.3s ease-out both; }
+        .typing span { animation: blink 1.2s infinite both; }
+        .typing span:nth-child(2) { animation-delay: .2s; }
+        .typing span:nth-child(3) { animation-delay: .4s; }
 
         .chart-bar-bg { background-color: #f3f4f6; border-radius: 9999px; height: 0.75rem; width: 100%; overflow: hidden;}
         .chart-bar-fill { height: 100%; border-radius: 9999px; transition: width 1s ease-in-out; }
-        
-        /* Modal Backdrop */
-        #actionModal {
-            display: none; /* Hidden by default */
-        }
-        #actionModal.active {
-            display: flex; /* Flex to center content */
+
+        /* Risk breakdown: stacked score bar + per-component meters */
+        .stack { display: flex; height: 0.5rem; width: 100%; border-radius: 9999px; overflow: hidden; background: #f3f4f6; gap: 2px; }
+        .stack > span { height: 100%; }
+        .meter { height: 0.25rem; border-radius: 9999px; background: #f3f4f6; overflow: hidden; }
+        .meter > span { display: block; height: 100%; border-radius: 9999px; }
+
+        /* Status Pills */
+        .status-pill { display: inline-flex; items-center; padding: 0.125rem 0.5rem; border-radius: 0.375rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid transparent; }
+        .status-not-started { background-color: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+        .status-in-progress { background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+        .status-in-review { background-color: #fdf4ff; color: #c026d3; border-color: #f5d0fe; }
+        .status-completed { background-color: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+        .status-snoozed { background-color: #fefce8; color: #ca8a04; border-color: #fef08a; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .animate-fade-in, .animate-slide-up, .typing span { animation: none; }
+            .chart-bar-fill { transition: none; }
         }
     </style>
 </head>
@@ -40,7 +58,7 @@
 
     <header class="bg-green-700 text-white shadow-md sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="showDashboard()">
                 <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-inner">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="#15803d"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13h-13L12 6.5z"/></svg>
                 </div>
@@ -58,8 +76,9 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 mt-8 flex flex-col gap-8">
-        
+    <!-- ===================== DASHBOARD VIEW ===================== -->
+    <main id="dashboardView" class="max-w-7xl mx-auto px-4 sm:px-6 mt-8 flex flex-col gap-8">
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex flex-col">
                 <span class="text-gray-500 font-semibold text-sm uppercase tracking-wide">Core Accounts (10+ Orders)</span>
@@ -82,21 +101,15 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Donut Chart Container -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <h3 class="font-bold text-lg text-gray-800 mb-6">Composite Risk Score Distribution</h3>
-                <div class="flex flex-col items-center justify-center" id="donutChartContainer">
-                    <!-- SVG injected by JS -->
-                </div>
+                <div class="flex flex-col items-center justify-center" id="donutChartContainer"></div>
                 <p class="text-center text-sm text-gray-500 mt-4 px-4 sm:px-8">Based on the 100-point Churn Risk Score across all 2,461 active core accounts.</p>
             </div>
-            
-            <!-- Bar Chart Container -->
+
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
                 <h3 class="font-bold text-lg text-gray-800 mb-6">Top Value Leaks (Dropped Categories)</h3>
-                <div class="flex-1 flex flex-col justify-center" id="barChartContainer">
-                    <!-- Bars injected by JS -->
-                </div>
+                <div class="flex-1 flex flex-col justify-center" id="barChartContainer"></div>
                 <p class="text-center text-sm text-gray-500 mt-4">Calculated across the 2,611 core accounts.</p>
             </div>
         </div>
@@ -107,31 +120,41 @@
                     <h3 class="font-bold text-lg text-gray-800">Priority Action Queue</h3>
                     <p class="text-sm text-gray-500 mt-1">Accounts ranked by Composite Risk Score.</p>
                 </div>
-                
+
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full md:w-auto">
-                    <div class="flex bg-gray-200/60 p-1 rounded-lg" id="filterContainer">
-                        <button onclick="setFilter('All')" class="filter-btn active px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-700 bg-white shadow-sm transition-all">All</button>
-                        <button onclick="setFilter('Critical')" class="filter-btn px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-500 hover:text-gray-700 transition-all">Critical</button>
-                        <button onclick="setFilter('High')" class="filter-btn px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-500 hover:text-gray-700 transition-all">High</button>
-                        <button onclick="setFilter('Medium')" class="filter-btn px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-500 hover:text-gray-700 transition-all">Med</button>
-                        <button onclick="setFilter('Low')" class="filter-btn px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-500 hover:text-gray-700 transition-all">Low</button>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-gray-500 mr-2" id="componentLegend"></div>
+                    
+                    <div class="flex items-center gap-2">
+                        <select id="statusFilter" onchange="applyFilters()" class="text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-md py-1.5 px-2 shadow-sm outline-none focus:border-green-500">
+                            <option value="All">All Statuses</option>
+                            <option value="Not started">Not Started</option>
+                            <option value="In progress">In Progress</option>
+                            <option value="In review">In Review</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                        
+                        <div class="flex bg-gray-200/60 p-1 rounded-lg" id="filterContainer">
+                            <button onclick="setFilter('All')" data-filter="All" class="filter-btn active px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-700 bg-white shadow-sm transition-all">All</button>
+                            <button onclick="setFilter('Critical')" data-filter="Critical" class="filter-btn px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-500 hover:text-gray-700 transition-all">Critical</button>
+                            <button onclick="setFilter('High')" data-filter="High" class="filter-btn px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-500 hover:text-gray-700 transition-all">High</button>
+                            <button onclick="setFilter('Medium')" data-filter="Medium" class="filter-btn px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-500 hover:text-gray-700 transition-all">Med</button>
+                            <button onclick="setFilter('Low')" data-filter="Low" class="filter-btn px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-gray-500 hover:text-gray-700 transition-all">Low</button>
+                        </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[800px]">
+                <table class="w-full text-left border-collapse min-w-[860px]">
                     <thead>
                         <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider font-semibold border-b border-gray-100">
                             <th class="p-4 pl-6">Account Details</th>
                             <th class="p-4">Risk Score Breakdown</th>
-                            <th class="p-4">Risk Level</th>
-                            <th class="p-4 pr-6 text-right">Recommended Action</th>
+                            <th class="p-4">Risk Level & Status</th>
+                            <th class="p-4 pr-6 text-right">Action Resolution</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 text-sm" id="tableBody">
-                        <!-- Rows injected by JS -->
-                    </tbody>
+                    <tbody class="divide-y divide-gray-100 text-sm" id="tableBody"></tbody>
                 </table>
             </div>
             <div class="p-4 border-t border-gray-100 bg-gray-50/30 flex justify-center items-center gap-4">
@@ -143,47 +166,187 @@
         </div>
     </main>
 
-    <div id="actionModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in relative">
-            <div class="bg-green-700 p-6 text-white flex justify-between items-start">
-                <div>
-                    <h2 class="text-xl font-bold">Recommended Action Plan</h2>
-                    <p class="text-green-100 text-sm opacity-90 mt-1" id="modalSubtitle">Account: A00000</p>
-                </div>
-                <button onclick="closeModal()" class="text-white hover:bg-green-600 p-1 rounded-lg transition-colors focus:outline-none">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    <!-- ===================== AGENT RUN VIEW (DETAILED ACCOUNT PAGE) ===================== -->
+    <main id="agentView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 mt-8 flex-col gap-6">
+        <!-- Breadcrumb & Header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div class="flex items-start gap-4">
+                <!-- Back Arrow Button -->
+                <button onclick="showDashboard()" class="mt-1 shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-green-700 transition-colors shadow-sm focus:outline-none" aria-label="Go back to dashboard">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
+                
+                <div>
+                    <nav class="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-2 mb-2">
+                        <button onclick="showDashboard()" class="hover:text-green-700 transition-colors">Priority Action Queue</button>
+                        <span class="text-gray-300">/</span>
+                        <span id="acctBreadcrumb" class="text-gray-700">A00000</span>
+                    </nav>
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-2xl font-bold text-gray-800" id="acctTitle">Account Details</h2>
+                        <span id="acctStatusPill" class="status-pill status-not-started">Not Started</span>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1" id="acctSubtitle">Location data...</p>
+                </div>
             </div>
             
-            <div class="p-6 flex flex-col gap-5">
-                <div class="flex gap-3 items-start p-4 bg-orange-50 border border-orange-100 rounded-xl">
-                    <svg class="text-orange-500 shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                    <div>
-                        <h3 class="font-semibold text-orange-800 text-sm uppercase tracking-wider mb-1">Risk Factors Identifed</h3>
-                        <p class="text-orange-900 font-medium" id="modalTriggers">Multiple triggers.</p>
-                        <p class="text-orange-700 text-sm mt-1 font-semibold">Total Score: <span id="modalScore">0</span>/100</p>
+            <div class="flex items-center gap-3" id="executionControls" style="display: none;">
+                <span id="runStatePill" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-green-50 text-green-700 border border-green-200">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Running
+                </span>
+                <button id="skipBtn" onclick="skipAgent()" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors">Skip to result</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Context, Action Approval & Timeline -->
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                
+                <!-- Section 1: Account Context & Pain Points -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                        <h3 class="font-bold text-lg text-gray-800">Account Summary & Profile</h3>
+                        <span id="ctxRisk" class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">Risk</span>
+                    </div>
+                    <div class="p-6 flex flex-col lg:flex-row gap-6 items-stretch">
+                        <!-- Score Breakdown -->
+                        <div class="flex-1 w-full bg-gray-50 border border-gray-100 rounded-xl p-4 flex flex-col">
+                            <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Risk Score Breakdown</h4>
+                            <div id="ctxBreakdown" class="flex-1"></div>
+                        </div>
+                        
+                        <!-- Customer Profile -->
+                        <div class="flex-1 w-full bg-gray-50 border border-gray-100 rounded-xl p-4 flex flex-col">
+                            <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Customer Profile & Behavior</h4>
+                            <ul id="ctxPreferences" class="text-sm text-gray-700 flex flex-col gap-2.5 list-disc pl-4 marker:text-green-600 flex-1">
+                                <!-- Injected by JS -->
+                            </ul>
+                        </div>
+
+                        <!-- Pain Point -->
+                        <div class="flex-1 w-full bg-orange-50 border border-orange-100 rounded-xl p-4 flex flex-col">
+                            <div class="flex items-center gap-2 mb-3">
+                                <svg class="text-orange-500 shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                <h4 class="font-semibold text-orange-800 text-xs uppercase tracking-wider">Primary Pain Point</h4>
+                            </div>
+                            <p class="text-orange-900 text-sm font-medium" id="ctxTrigger">Description of why this account was flagged.</p>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <h3 class="font-semibold text-gray-800 mb-2">Recommended Next Best Action</h3>
-                    <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl relative">
-                        <span id="modalActionBadge" class="absolute top-3 right-3 text-xs bg-gray-200 text-gray-800 px-2 py-1 rounded-md font-bold">Action</span>
-                        <p class="text-sm text-gray-600 italic" id="modalScript">"Script goes here..."</p>
+                <!-- Section 2: Action Approval (Hidden when completed) -->
+                <div id="actionApprovalSection" class="bg-white rounded-2xl shadow-sm border border-green-200 overflow-hidden ring-1 ring-green-100">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-start bg-green-50/30">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1" id="humanBadgeContainer">
+                                <span class="bg-green-800 text-green-100 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-green-600">Human-in-the-Loop Required</span>
+                            </div>
+                            <h3 class="font-bold text-lg text-gray-800" id="approvalTitle">Review Suggested Action Plan</h3>
+                        </div>
+                        <span id="modalActionBadge" class="text-[10px] bg-green-100 text-green-800 border border-green-200 px-2 py-1 rounded-md font-bold uppercase tracking-wider">Action Type</span>
+                    </div>
+
+                    <div class="p-6 flex flex-col gap-5">
+                        <div id="offerSection">
+                            <h4 class="font-semibold text-gray-800 text-sm mb-2">Suggested Offer / Intervention</h4>
+                            <div class="bg-white border border-gray-200 p-3 rounded-lg flex items-center gap-3 mb-3">
+                                <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                                </div>
+                                <input type="text" id="offerEditInput" class="flex-1 text-sm font-medium text-gray-800 border-none bg-transparent focus:ring-0 p-0" value="Offer details">
+                                <button class="text-xs text-green-700 font-semibold hover:underline px-2">Edit</button>
+                            </div>
+                            <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3 flex gap-2">
+                                <svg class="text-indigo-500 mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                <p class="text-sm text-indigo-900 leading-snug"><span class="font-bold">Why this offer:</span> <span id="offerRationaleText">Rationale text here.</span></p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-gray-800 text-sm mb-2">Suggested Script / Message</h4>
+                            <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl relative">
+                                <p class="text-sm text-gray-600 italic" id="modalScript">"Script goes here..."</p>
+                            </div>
+                        </div>
+
+                        <!-- Execution Controls Container -->
+                        <div id="humanExecutionControls" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pt-5 border-t border-gray-100" style="display: none;">
+                            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <h5 class="font-bold text-sm mb-1 text-gray-800">1. Make the Call & Log Outcome</h5>
+                                    <p class="text-[11px] text-gray-500 mb-3">You own this relationship. Record the result below to close the case.</p>
+                                    <select id="humanOutcomeSelect" class="w-full text-sm mb-2 p-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-green-500 shadow-sm cursor-pointer">
+                                        <option value="Completed">Success - Order Placed / Resolved</option>
+                                        <option value="Snoozed">Snoozed - Follow up later</option>
+                                        <option value="In review">Escalated - Needs Manager Review</option>
+                                    </select>
+                                    <textarea id="humanNotes" rows="2" class="w-full text-sm p-2.5 rounded-lg border border-gray-300 mb-3 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500 shadow-sm" placeholder="Brief call notes..."></textarea>
+                                </div>
+                                <button onclick="logHumanInteraction()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Complete Case
+                                </button>
+                            </div>
+                            
+                            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col justify-between text-center shadow-sm">
+                                <div>
+                                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01"/><path d="M16 16h.01"/></svg>
+                                    </div>
+                                    <h5 class="font-bold text-sm mb-1 text-blue-900">2. Delegate to AI Agent</h5>
+                                    <p class="text-[11px] text-blue-700 mb-4 px-2 leading-relaxed">Busy? The AI voice agent can call the customer right now using the specific offer and script above.</p>
+                                </div>
+                                <button onclick="startExecution()" class="w-full bg-white border border-blue-300 text-blue-700 hover:bg-blue-100 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm">
+                                    Trigger AI Reach-out
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="autoExecutionControls" class="mt-2 pt-4 border-t border-gray-100" style="display: none;">
+                            <button onclick="startExecution()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01"/><path d="M16 16h.01"/></svg> Trigger Automated Reach-out
+                            </button>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="flex gap-3 mt-2">
-                    <button onclick="closeModal()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-medium transition-colors shadow-sm">
-                        Log Interaction
-                    </button>
-                    <button onclick="closeModal()" class="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 rounded-lg font-medium transition-colors shadow-sm">
-                        Snooze Alert
-                    </button>
+
+                <!-- Section 3: Execution Timeline (Hidden until execution starts) -->
+                <div id="timelineSection" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col animate-fade-in">
+                    <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-green-700 text-white flex items-center justify-center shadow-sm">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01"/><path d="M16 16h.01"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-800">Sales Advisor Agent</h3>
+                            <p class="text-sm text-gray-500" id="agentChannel">Channel</p>
+                        </div>
+                    </div>
+                    <ol class="p-6 flex flex-col gap-5" id="agentSteps"></ol>
                 </div>
             </div>
+
+            <!-- Right Column: Final Outcome -->
+            <div class="flex flex-col gap-6">
+                <div id="outcomeCard" class="hidden bg-white rounded-2xl shadow-sm border border-green-200 overflow-hidden animate-slide-up">
+                    <div class="bg-green-700 text-white p-5">
+                        <span class="text-green-200 font-semibold text-xs uppercase tracking-widest">Outcome</span>
+                        <p class="text-xl font-bold mt-1" id="outHeadline">Action completed</p>
+                    </div>
+                    <div class="p-5 flex flex-col gap-3 text-sm" id="outRows"></div>
+                    <div class="p-5 pt-0 flex flex-col gap-2">
+                        <div class="flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            <span>Projected risk score</span><span id="outScoreText">0 → 0</span>
+                        </div>
+                        <div class="chart-bar-bg"><div class="chart-bar-fill bg-green-600" id="outScoreBar" style="width:0%"></div></div>
+                    </div>
+                    <div class="p-5 border-t border-gray-100 bg-gray-50/50 flex flex-col gap-3">
+                        <button onclick="nextAccount()" class="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 rounded-lg font-medium transition-colors shadow-sm">Proceed to Next Account</button>
+                        <button onclick="showDashboard()" class="text-xs text-gray-500 hover:text-gray-700 font-medium">Back to Queue</button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 px-2" id="prototypeNotice">Prototype Note: The agent run below is simulated using demo data to demonstrate how the recommended action is executed end-to-end.</p>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
         // Real case distributions for the 2,611 Core Accounts
@@ -193,31 +356,45 @@
             high: 400,      // Score 50-74
             critical: 161   // Score 75-100
         };
-        // The remaining 150 from the 2,611 are >90 days "Lost" accounts (not shown in active risk table)
 
         const DROPPED_CATEGORIES = [
-            { name: 'Small Appliances', value: 7407, color: '#f97316' }, 
-            { name: 'Health & Beauty', value: 3747, color: '#eab308' }, 
-            { name: 'Sports Leisure', value: 3655, color: '#3b82f6' }, 
-            { name: 'Cool Stuff', value: 3418, color: '#a855f7' }, 
-            { name: 'Watches & Gifts', value: 3045, color: '#ec4899' }, 
+            { name: 'Small Appliances', value: 7407, color: '#f97316' },
+            { name: 'Health & Beauty', value: 3747, color: '#eab308' },
+            { name: 'Sports Leisure', value: 3655, color: '#3b82f6' },
+            { name: 'Cool Stuff', value: 3418, color: '#a855f7' },
+            { name: 'Watches & Gifts', value: 3045, color: '#ec4899' },
         ];
 
-        let ALL_ACCOUNTS = []; // Will hold all 2,461 active core accounts
-        let filteredData = []; // Holds data based on current filter
-        let currentFilter = 'All';
-        let visibleCount = 20; // Default load amount to ensure browser doesn't freeze
-        const LOAD_STEP = 50;
+        const COMPONENTS = [
+            { key: 'f', label: 'Frequency',     short: 'Freq',    max: 40, color: '#0f766e' },
+            { key: 'r', label: 'Revenue drop',  short: 'Revenue', max: 30, color: '#4f46e5' },
+            { key: 'c', label: 'Category drop', short: 'Category',max: 15, color: '#0ea5e9' },
+            { key: 's', label: 'Service',       short: 'Service', max: 15, color: '#c026d3' },
+        ];
 
-        // Function to randomly generate the massive mock dataset upon load
+        const RISK_CLASS = {
+            Critical: 'bg-red-100 text-red-800',
+            High: 'bg-orange-100 text-orange-800',
+            Medium: 'bg-yellow-100 text-yellow-800',
+            Low: 'bg-green-100 text-green-800'
+        };
+
+        let ALL_ACCOUNTS = []; 
+        let filteredData = []; 
+        let currentFilter = 'All';
+        let visibleCount = 20; 
+        const LOAD_STEP = 50;
+        let currentAccount = null;
+
         function generateMassiveDataset() {
             const cities = ['São Paulo, SP', 'Rio de Janeiro, RJ', 'Belo Horizonte, MG', 'Salvador, BA', 'Curitiba, PR', 'Campinas, SP', 'Porto Alegre, RS', 'Brasilia, DF', 'Fortaleza, CE', 'Manaus, AM'];
+            const prefOptions = ['Prefers WhatsApp comms', 'Usually orders on Mondays', 'Top category: Core Lagers', 'Price sensitive on freight', 'Frequent bulk buyer', 'Responds well to bundles', 'Values guaranteed slots'];
             const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            
+            let uid = 0;
+
             function createTierAccounts(count, riskLevel, minScore, maxScore) {
                 const accounts = [];
                 for(let i = 0; i < count; i++) {
-                    // Generate valid combination of scores that sum correctly
                     let f, c, r, s, total;
                     do {
                         f = [0, 10, 20, 30, 40][randomInt(0, 4)];
@@ -227,115 +404,148 @@
                         total = f + c + r + s;
                     } while (total < minScore || total > maxScore);
 
-                    let triggerDesc, actionType, badgeClass, script;
+                    let triggerDesc, actionType, badgeClass, script, rationale;
+                    const prefs = [prefOptions[randomInt(0, 2)], prefOptions[randomInt(3, 6)]];
+                    const dropCat = DROPPED_CATEGORIES[randomInt(0, DROPPED_CATEGORIES.length - 1)].name;
 
-                    // Assign realistic scripts and triggers based on risk tier
                     if (riskLevel === 'Critical') {
                         badgeClass = 'bg-red-100 text-red-800';
                         actionType = randomInt(0, 1) === 0 ? 'Urgent Win-Back' : 'Service & Pricing Intervention';
                         triggerDesc = f > 20 ? 'Massive rhythm break, >70% revenue drop.' : 'Very poor reviews, dropped core categories.';
                         script = '"Hi, I see you’ve drastically reduced your orders recently. I’d like to review our pricing tiers and offer a 15% discount on your next invoice to get you back on track."';
+                        rationale = f > 20 ? "A 15% discount matches typical competitor win-back offers and directly offsets their perceived volume decline." : "A price tier review directly addresses their dissatisfaction and prevents complete brand abandonment.";
                     } else if (riskLevel === 'High') {
                         badgeClass = 'bg-orange-100 text-orange-800';
                         actionType = c > 5 ? 'Win-Back Bundle' : 'Service Recovery';
-                        triggerDesc = c > 5 ? 'Dropped multiple core categories, revenue declining.' : 'Service complaints noted with declining volume.';
+                        triggerDesc = c > 5 ? `Dropped ${dropCat}, overall revenue declining.` : 'Service complaints noted with declining volume.';
                         script = '"I noticed we let you down on delivery and you stopped ordering some usual items. I have a credit ready for you to make up for the bad experience."';
+                        rationale = c > 5 ? `Bundling ${dropCat} reintroduces the category without permanently discounting their core basket.` : "A service credit acknowledges our logistical failure and restores goodwill instantly without lowering baseline pricing.";
                     } else if (riskLevel === 'Medium') {
                         badgeClass = 'bg-yellow-100 text-yellow-800';
-                        actionType = r > 10 ? 'Category Promo' : 'Service Check-in';
-                        triggerDesc = 'Moderate revenue decline and missing categories.';
-                        script = '"We have a special promo this week on a few categories you normally stock but missed last month. Want to add it to the list?"';
+                        const mainDriverKey = [
+                            { key: 'f', val: f/40 }, { key: 'r', val: r/30 },
+                            { key: 'c', val: c/15 }, { key: 's', val: s/15 }
+                        ].sort((a, b) => b.val - a.val)[0].key;
+
+                        if (mainDriverKey === 'c') {
+                            actionType = 'Targeted Category Promo';
+                            triggerDesc = 'Moderate risk driven primarily by dropped categories.';
+                            script = `The system will automatically send a targeted WhatsApp message:\n\n"Olá! We noticed you haven't ordered ${dropCat} recently. We have a special promo this week if you want to add it back to your regular list."`;
+                        } else if (mainDriverKey === 'r') {
+                            actionType = 'Volume & Revenue Check-in';
+                            triggerDesc = 'Moderate risk driven by declining revenue and volume.';
+                            script = `The system will automatically trigger a voice agent check-in:\n\n"Hello, this is the HEINEKEN support team. We were reviewing your account and noticed that your overall order volume has dipped, leading to a drop in your usual spend. We want to make sure everything is okay. Is there anything we can help adjust?"`;
+                        } else {
+                            actionType = 'Rhythm Check-in';
+                            triggerDesc = 'Moderate risk driven by delayed ordering cycle or service.';
+                            script = `The system will automatically send a targeted message:\n\n"Hi there, just checking in as your usual order cycle seems a bit delayed. Let us know if you need help with your next delivery."`;
+                        }
+                        rationale = "Targeted messaging keeps HEINEKEN top-of-mind and corrects behavior before it escalates to High risk.";
                     } else {
                         badgeClass = 'bg-blue-100 text-blue-800';
                         actionType = 'AI Follow-up Scheduled';
                         triggerDesc = 'Slight delay in usual ordering cycle. Monitor closely.';
                         script = 'The system will trigger an automated AI voice agent to check in.\n\n"Hello, this is the HEINEKEN support team. We noticed your usual order cycle is approaching. Is there anything we can help you with today?"';
+                        rationale = "Automated check-ins prevent rhythm breaks early without costing valuable rep time.";
                     }
 
                     accounts.push({
+                        uid: uid++,
                         id: 'A' + randomInt(10000, 99999),
                         location: cities[randomInt(0, cities.length - 1)],
                         f, c, r, s, total, risk: riskLevel,
-                        triggerDesc, actionType, badgeClass, script
+                        triggerDesc, actionType, badgeClass, script, rationale, preferences: prefs,
+                        usualOrder: randomInt(8, 45) * 100,
+                        daysSilent: riskLevel === 'Low' ? randomInt(12, 25) : randomInt(30, 120),
+                        usualGap: randomInt(10, 30),
+                        droppedCat: dropCat,
+                        status: 'Not started', run: null, offerString: ''
                     });
                 }
                 return accounts;
             }
 
-            // Generate exact counts to match the real distributions
             const critical = createTierAccounts(ACCOUNT_HEALTH.critical, 'Critical', 75, 100);
             const high = createTierAccounts(ACCOUNT_HEALTH.high, 'High', 50, 74);
             const medium = createTierAccounts(ACCOUNT_HEALTH.medium, 'Medium', 25, 49);
             const low = createTierAccounts(ACCOUNT_HEALTH.low, 'Low', 0, 24);
 
-            // Combine and sort by critical score first
-            ALL_ACCOUNTS = [...critical, ...high, ...medium, ...low].sort((a, b) => b.total - a.total);
-            filteredData = [...ALL_ACCOUNTS];
+            ALL_ACCOUNTS = [...critical, ...high, ...medium, ...low];
+            
+            ALL_ACCOUNTS.forEach(acc => {
+               if (acc.actionType === 'Urgent Win-Back') acc.offerString = '15% discount on next invoice';
+               else if (acc.actionType === 'Service & Pricing Intervention') acc.offerString = '10% service credit + price tier review';
+               else if (acc.actionType === 'Win-Back Bundle') acc.offerString = `Add ${acc.droppedCat} at 10% off + free delivery`;
+               else if (acc.actionType === 'Service Recovery') acc.offerString = '8% apology credit applied to next order';
+               else if (acc.actionType === 'Targeted Category Promo') acc.offerString = `${acc.droppedCat} added to order on weekly promo`;
+               else if (acc.actionType === 'Volume & Revenue Check-in') acc.offerString = 'Volume discount review triggered';
+               else acc.offerString = 'Standard order processing';
+
+               if ((acc.risk === 'Low' && acc.total >= 20) || (acc.risk === 'Medium' && acc.total >= 45)) {
+                   acc.status = 'Completed';
+               }
+            });
+
+            applyFilters();
         }
+
+        const byUid = uid => ALL_ACCOUNTS.find(a => a.uid === uid);
+        const fmtR = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 
         function setFilter(filterVal) {
             currentFilter = filterVal;
-            visibleCount = 20; // reset visible count when filtering
-            
-            // Update Data Array
-            if (filterVal === 'All') {
-                filteredData = [...ALL_ACCOUNTS];
-            } else {
-                filteredData = ALL_ACCOUNTS.filter(acc => acc.risk === filterVal);
-            }
-            
-            // Update UI styles for filter pills
-            const btns = document.querySelectorAll('.filter-btn');
-            btns.forEach(btn => {
-                const matchText = filterVal === 'Medium' ? 'MED' : filterVal.toUpperCase();
-                if(btn.innerText.trim().toUpperCase() === matchText) {
-                    btn.classList.add('bg-white', 'shadow-sm', 'text-gray-700');
-                    btn.classList.remove('text-gray-500', 'hover:text-gray-700');
-                } else {
-                    btn.classList.remove('bg-white', 'shadow-sm', 'text-gray-700');
-                    btn.classList.add('text-gray-500', 'hover:text-gray-700');
-                }
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const on = btn.dataset.filter === filterVal;
+                btn.classList.toggle('bg-white', on);
+                btn.classList.toggle('shadow-sm', on);
+                btn.classList.toggle('text-gray-700', on);
+                btn.classList.toggle('text-gray-500', !on);
+                btn.classList.toggle('hover:text-gray-700', !on);
             });
-            
+            applyFilters();
+        }
+        
+        function applyFilters() {
+            const statusVal = document.getElementById('statusFilter').value;
+            filteredData = ALL_ACCOUNTS.filter(acc => {
+                const riskMatch = currentFilter === 'All' || acc.risk === currentFilter;
+                const statusMatch = statusVal === 'All' || acc.status === statusVal;
+                return riskMatch && statusMatch;
+            });
+
+            filteredData.sort((a, b) => {
+                const aDone = a.status === 'Completed' || a.status === 'Snoozed';
+                const bDone = b.status === 'Completed' || b.status === 'Snoozed';
+                if (aDone !== bDone) return aDone ? 1 : -1;
+                return b.total - a.total; 
+            });
+
+            visibleCount = 20; 
             renderTable();
         }
 
         function loadMore() {
-            visibleCount += LOAD_STEP;
-            if(visibleCount > filteredData.length) {
-                visibleCount = filteredData.length;
-            }
+            visibleCount = Math.min(visibleCount + LOAD_STEP, filteredData.length);
             renderTable();
         }
 
+        // ---------- Render Functions ----------
         function renderDonutChart() {
             const data = ACCOUNT_HEALTH;
             const totalActive = data.low + data.medium + data.high + data.critical;
-            
-            // Calculate percentages
-            const lowPct = (data.low / totalActive) * 100;
-            const medPct = (data.medium / totalActive) * 100;
-            const highPct = (data.high / totalActive) * 100;
-            const critPct = (data.critical / totalActive) * 100;
-            
             const radius = 40;
             const circ = 2 * Math.PI * radius;
-            
-            const lowStroke = (lowPct / 100) * circ;
-            const medStroke = (medPct / 100) * circ;
-            const highStroke = (highPct / 100) * circ;
-            const critStroke = (critPct / 100) * circ;
+            const lowStroke = (data.low / totalActive) * circ;
+            const medStroke = (data.medium / totalActive) * circ;
+            const highStroke = (data.high / totalActive) * circ;
+            const critStroke = (data.critical / totalActive) * circ;
 
             const svg = `
                 <svg width="160" height="160" viewBox="0 0 100 100" class="transform -rotate-90">
                     <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#f3f4f6" stroke-width="15" />
-                    <!-- Low -->
                     <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#16a34a" stroke-width="15" stroke-dasharray="${lowStroke} ${circ}" />
-                    <!-- Medium -->
                     <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#eab308" stroke-width="15" stroke-dasharray="${medStroke} ${circ}" stroke-dashoffset="-${lowStroke}" />
-                    <!-- High -->
                     <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#f97316" stroke-width="15" stroke-dasharray="${highStroke} ${circ}" stroke-dashoffset="-${lowStroke + medStroke}" />
-                    <!-- Critical -->
                     <circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#dc2626" stroke-width="15" stroke-dasharray="${critStroke} ${circ}" stroke-dashoffset="-${lowStroke + medStroke + highStroke}" />
                 </svg>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs font-medium text-gray-600">
@@ -343,18 +553,15 @@
                     <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Med (25-49)</div>
                     <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-orange-500"></span> High (50-74)</div>
                     <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-600"></span> Crit (75-100)</div>
-                </div>
-            `;
+                </div>`;
             document.getElementById('donutChartContainer').innerHTML = svg;
         }
 
         function renderBarChart() {
             const data = DROPPED_CATEGORIES;
             const maxVal = Math.max(...data.map(d => d.value));
-            
             let html = '<div class="w-full flex flex-col gap-4">';
             data.forEach(item => {
-                const widthPct = (item.value / maxVal) * 100;
                 html += `
                     <div class="flex flex-col gap-1.5">
                         <div class="flex justify-between text-xs font-semibold text-gray-700">
@@ -362,110 +569,579 @@
                             <span>R$ ${item.value.toLocaleString()}</span>
                         </div>
                         <div class="chart-bar-bg">
-                            <div class="chart-bar-fill" style="width: ${widthPct}%; background-color: ${item.color};"></div>
+                            <div class="chart-bar-fill" style="width: ${(item.value / maxVal) * 100}%; background-color: ${item.color};"></div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
-            html += '</div>';
-            document.getElementById('barChartContainer').innerHTML = html;
+            document.getElementById('barChartContainer').innerHTML = html + '</div>';
+        }
+
+        function renderLegend() {
+            document.getElementById('componentLegend').innerHTML = COMPONENTS.map(c =>
+                `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${c.color}"></span>${c.short}</span>`).join('');
+        }
+
+        function mainDriver(acc) {
+            return COMPONENTS.slice().sort((a, b) => (acc[b.key] / b.max) - (acc[a.key] / a.max))[0];
+        }
+
+        function breakdownHTML(acc, size = 'compact') {
+            const stack = COMPONENTS.filter(c => acc[c.key] > 0).map(c =>
+                `<span title="${c.label}: ${acc[c.key]}/${c.max}" style="width:${(acc[c.key]/100)*100}%; background:${c.color}"></span>`).join('');
+            const driver = mainDriver(acc);
+            const rows = COMPONENTS.map(c => {
+                const pct = (acc[c.key] / c.max) * 100;
+                const isDriver = c.key === driver.key && acc[c.key] > 0;
+                return `
+                    <div class="flex flex-col gap-1">
+                        <div class="flex justify-between items-center ${size === 'compact' ? 'text-[11px]' : 'text-sm'}">
+                            <span class="flex items-center gap-1.5 ${isDriver ? 'text-gray-800 font-bold' : 'text-gray-600 font-medium'}">
+                                <span class="w-2 h-2 rounded-full shrink-0" style="background:${c.color}"></span>${size === 'compact' ? c.short : c.label}
+                            </span>
+                            <span class="tabular-nums font-semibold text-gray-800 ${size === 'compact' ? '' : 'text-base'}">${acc[c.key]}<span class="text-gray-400 font-normal ${size === 'compact' ? '' : 'text-sm'}">/${c.max}</span></span>
+                        </div>
+                        ${size === 'compact' ? `<div class="meter"><span style="width:${pct}%; background:${c.color}; opacity:${acc[c.key] ? 1 : 0}"></span></div>` : ''}
+                    </div>`;
+            }).join('');
+            
+            if (size === 'compact') {
+                return `
+                    <div class="w-64 flex flex-col gap-2.5">
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="stack flex-1">${stack}</div>
+                            <span class="tabular-nums text-xs font-bold text-gray-800 w-12 text-right">${acc.total}<span class="text-gray-400 font-medium">/100</span></span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2">${rows}</div>
+                        ${acc.total > 0 ? `<span class="text-[11px] text-gray-500 mt-1">Main driver: <span class="font-semibold text-gray-700">${driver.label}</span></span>` : ''}
+                    </div>`;
+            } else {
+                return `
+                    <div class="w-full flex flex-col gap-2">
+                        <div class="flex items-baseline gap-2 mb-2 border-b border-gray-200 pb-3">
+                            <span class="text-4xl font-black text-gray-800">${acc.total}</span>
+                            <span class="text-sm font-bold text-gray-400 uppercase tracking-widest">/ 100 Total Risk</span>
+                        </div>
+                        <div class="flex flex-col gap-3.5 mt-1">${rows}</div>
+                    </div>`;
+            }
+        }
+
+        function statusClass(status) {
+            switch(status) {
+                case 'Not started': return 'status-not-started';
+                case 'In progress': return 'status-in-progress';
+                case 'In review': return 'status-in-review';
+                case 'Completed': return 'status-completed';
+                case 'Snoozed': return 'status-snoozed';
+                default: return 'status-not-started';
+            }
         }
 
         function renderTable() {
             const tbody = document.getElementById('tableBody');
-            const loadMoreBtn = document.getElementById('loadMoreBtn');
-            const countText = document.getElementById('showingCountText');
-            let html = '';
-            
             const visibleData = filteredData.slice(0, visibleCount);
-            
+            let html = '';
+
             if (visibleData.length === 0) {
                 html = `<tr><td colspan="4" class="p-8 text-center text-gray-500 italic">No accounts found matching this filter.</td></tr>`;
             } else {
                 visibleData.forEach((acc) => {
-                    let riskClass = '';
-                    if (acc.risk === 'Critical') riskClass = 'bg-red-100 text-red-800';
-                    else if (acc.risk === 'High') riskClass = 'bg-orange-100 text-orange-800';
-                    else if (acc.risk === 'Medium') riskClass = 'bg-yellow-100 text-yellow-800';
-                    else riskClass = 'bg-green-100 text-green-800';
-
+                    const done = acc.status === 'Completed';
+                    const requiresHuman = acc.risk === 'Critical' || acc.risk === 'High';
+                    
                     html += `
-                        <tr class="hover:bg-gray-50/50 transition-colors">
-                            <td class="p-4 pl-6">
+                        <tr class="hover:bg-gray-50/50 transition-colors ${acc.status === 'Snoozed' ? 'opacity-60' : ''}">
+                            <td class="p-4 pl-6 align-top">
                                 <div class="flex flex-col">
                                     <span class="font-bold text-gray-800 text-base">${acc.id}</span>
                                     <span class="text-gray-500 text-xs">${acc.location}</span>
                                 </div>
                             </td>
-                            <td class="p-4">
-                                <div class="flex flex-col gap-1 text-xs text-gray-600">
-                                    <div class="flex justify-between w-32"><span>Freq:</span><span class="font-medium">${acc.f}/40</span></div>
-                                    <div class="flex justify-between w-32"><span>Cat Drop:</span><span class="font-medium">${acc.c}/15</span></div>
-                                    <div class="flex justify-between w-32"><span>Rev Drop:</span><span class="font-medium">${acc.r}/30</span></div>
-                                    <div class="flex justify-between w-32"><span>Service:</span><span class="font-medium">${acc.s}/15</span></div>
-                                </div>
-                            </td>
-                            <td class="p-4">
-                                <div class="flex flex-col items-start gap-1">
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${riskClass}">
+                            <td class="p-4">${breakdownHTML(acc)}</td>
+                            <td class="p-4 align-top">
+                                <div class="flex flex-col items-start gap-1.5">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${RISK_CLASS[acc.risk]}">
                                         ${acc.risk} (${acc.total})
                                     </span>
+                                    <span class="status-pill ${statusClass(acc.status)}">${acc.status}</span>
                                 </div>
                             </td>
-                            <td class="p-4 pr-6 text-right">
-                                <button onclick='openModal(${JSON.stringify(acc)})' 
-                                    class="px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm ${
-                                        acc.risk === 'Low'
-                                        ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
-                                        : 'bg-green-600 text-white hover:bg-green-700'
-                                    }">
-                                    ${acc.risk === 'Low' ? 'View AI Flow' : 'Generate Action'}
-                                </button>
+                            <td class="p-4 pr-6 text-right align-top">
+                                <div class="flex flex-col items-end gap-1.5">
+                                    <button onclick="openAgent(${acc.uid})"
+                                        class="px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm ${
+                                            done ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                            : requiresHuman ? 'bg-green-600 text-white hover:bg-green-700'
+                                            : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                                        }">
+                                        ${done ? 'View Resolution' 
+                                        : requiresHuman ? 'Review & Call' : 'View Details'}
+                                    </button>
+                                    <div class="flex items-center gap-1 text-[11px] text-gray-400">
+                                        ${requiresHuman && !done ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Human' : ''}
+                                        ${!requiresHuman && !done ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01"/><path d="M16 16h.01"/></svg> Auto' : ''}
+                                        <span class="truncate max-w-[120px]">${acc.actionType}</span>
+                                    </div>
+                                </div>
                             </td>
-                        </tr>
-                    `;
+                        </tr>`;
                 });
             }
-            
+
             tbody.innerHTML = html;
-            
-            // Update Paginator Footer
-            countText.innerText = `Showing ${visibleData.length} of ${filteredData.length} Accounts`;
-            
-            if (visibleCount >= filteredData.length) {
-                loadMoreBtn.style.display = 'none';
-            } else {
-                loadMoreBtn.style.display = 'block';
+            document.getElementById('showingCountText').innerText = `Showing ${visibleData.length} of ${filteredData.length} Accounts`;
+            document.getElementById('loadMoreBtn').style.display = visibleCount >= filteredData.length ? 'none' : 'block';
+        }
+
+
+        // ---------- Agent / Detail View Logic ----------
+        let agentTimers = [];
+        let agentSkip = false;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function showDashboard() {
+            agentTimers.forEach(clearTimeout); agentTimers = [];
+            document.getElementById('agentView').classList.add('hidden');
+            document.getElementById('agentView').classList.remove('flex');
+            document.getElementById('dashboardView').classList.remove('hidden');
+            renderTable();
+            window.scrollTo({ top: 0 });
+        }
+
+        function nextAccount() {
+            const next = filteredData.find(a => a.status === 'Not started' || a.status === 'In progress');
+            if (next) openAgent(next.uid);
+            else showDashboard();
+        }
+
+        function manualStatusUpdate() {
+            if (!currentAccount) return;
+            const val = document.getElementById('statusUpdateSelect').value;
+            if (val) {
+                currentAccount.status = val;
+                showDashboard();
+                applyFilters();
             }
         }
 
-        function openModal(accountData) {
-            document.getElementById('modalSubtitle').innerText = `Account: ${accountData.id} • ${accountData.location}`;
-            document.getElementById('modalTriggers').innerText = accountData.triggerDesc;
-            document.getElementById('modalScore').innerText = accountData.total;
+        function logHumanInteraction() {
+            if (!currentAccount) return;
+            const acc = currentAccount;
+            const statusVal = document.getElementById('humanOutcomeSelect').value;
+            const notesVal = document.getElementById('humanNotes').value || 'No notes provided.';
             
-            const badge = document.getElementById('modalActionBadge');
-            badge.innerText = accountData.actionType;
-            badge.className = `absolute top-3 right-3 text-xs px-2 py-1 rounded-md font-bold ${accountData.badgeClass}`;
+            acc.status = statusVal;
+            setRunStatus('done');
             
-            // Format script to handle newlines for the AI text
-            document.getElementById('modalScript').innerHTML = accountData.script.replace(/\n/g, '<br>');
+            const p = document.getElementById('acctStatusPill');
+            p.className = `status-pill ${statusClass(acc.status)}`;
+            p.innerText = acc.status;
+
+            document.getElementById('actionApprovalSection').style.display = 'none';
+            document.getElementById('timelineSection').classList.add('hidden');
             
-            document.getElementById('actionModal').classList.add('active');
+            // Build pseudo-plan for the outcome card
+            const newScore = Math.max(5, Math.round(acc.total * 0.45)); // Arbitrary success drop
+            
+            document.getElementById('outHeadline').innerText = 'Manual Interaction Logged';
+            document.getElementById('outRows').innerHTML = `
+                <div class="flex justify-between gap-3"><span class="text-gray-500">Recorded Outcome</span><span class="font-semibold text-gray-800 text-right">${statusVal}</span></div>
+                <div class="flex justify-between gap-3"><span class="text-gray-500">Rep Notes</span><span class="font-semibold text-gray-800 text-right italic max-w-xs">${notesVal}</span></div>
+            `;
+            document.getElementById('outScoreText').innerText = `${acc.total} → ${newScore}`;
+            
+            const card = document.getElementById('outcomeCard'); 
+            card.classList.remove('hidden');
+            
+            const bar = document.getElementById('outScoreBar');
+            bar.style.width = acc.total + '%';
+            requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = newScore + '%'; }));
         }
 
-        function closeModal() {
-            document.getElementById('actionModal').classList.remove('active');
+        function openAgent(uid) {
+            const acc = byUid(uid); currentAccount = acc;
+            agentTimers.forEach(clearTimeout); agentTimers = [];
+            agentSkip = reduceMotion;
+            
+            if (!acc.run) acc.run = buildPlan(acc);
+            
+            const isHuman = acc.risk === 'Critical' || acc.risk === 'High';
+            const isCompleted = acc.status === 'Completed' || acc.status === 'Snoozed' || acc.status === 'In review';
+
+            // Navigation & Header updates
+            document.getElementById('dashboardView').classList.add('hidden');
+            const av = document.getElementById('agentView'); av.classList.remove('hidden'); av.classList.add('flex');
+            window.scrollTo({ top: 0 });
+
+            document.getElementById('acctBreadcrumb').innerText = acc.id;
+            
+            const p = document.getElementById('acctStatusPill');
+            p.className = `status-pill ${statusClass(acc.status)}`;
+            p.innerText = acc.status;
+
+            // Context section
+            const rk = document.getElementById('ctxRisk'); 
+            rk.className = `inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${RISK_CLASS[acc.risk]}`; 
+            rk.innerText = `${acc.risk} (${acc.total})`;
+            document.getElementById('ctxBreakdown').innerHTML = breakdownHTML(acc, 'full');
+            document.getElementById('ctxTrigger').innerText = acc.triggerDesc;
+            
+            // Populate Preferences
+            document.getElementById('ctxPreferences').innerHTML = acc.preferences.map(p => `<li>${p}</li>`).join('');
+
+            // Display Logic based on Status
+            const approvalSection = document.getElementById('actionApprovalSection');
+            const timelineSection = document.getElementById('timelineSection');
+            const outcomeCard = document.getElementById('outcomeCard');
+            const executionControls = document.getElementById('executionControls');
+            
+            const humanControls = document.getElementById('humanExecutionControls');
+            const autoControls = document.getElementById('autoExecutionControls');
+
+            if (isCompleted) {
+                // If done, hide approval, show timeline immediately and fast forward
+                approvalSection.style.display = 'none';
+                timelineSection.classList.remove('hidden');
+                timelineSection.classList.add('flex');
+                executionControls.style.display = 'none';
+                agentSkip = true; // force instant render
+                setupTimeline(acc);
+                runStep(acc, 0);
+            } else {
+                // Not started or in progress: show Approval, hide timeline
+                if (acc.status === 'Not started') acc.status = 'In progress';
+                p.className = `status-pill ${statusClass(acc.status)}`; p.innerText = acc.status;
+                
+                outcomeCard.classList.add('hidden');
+                timelineSection.classList.add('hidden');
+                timelineSection.classList.remove('flex');
+                approvalSection.style.display = 'block';
+                executionControls.style.display = 'none';
+                
+                // Populate Approval Section
+                const badge = document.getElementById('modalActionBadge');
+                badge.innerText = acc.actionType;
+                
+                const title = document.getElementById('approvalTitle');
+                const humanBadge = document.getElementById('humanBadgeContainer');
+                const offerSection = document.getElementById('offerSection');
+                
+                document.getElementById('offerRationaleText').innerText = acc.rationale;
+                document.getElementById('modalScript').innerHTML = acc.script.replace(/\n/g, '<br>');
+                
+                // Reset manual form
+                document.getElementById('humanNotes').value = '';
+                document.getElementById('humanOutcomeSelect').value = 'Completed';
+
+                if (isHuman) {
+                    title.innerText = 'Intervention Strategy & Execution';
+                    humanBadge.style.display = 'flex';
+                    offerSection.style.display = 'block';
+                    document.getElementById('offerEditInput').value = acc.offerString;
+                    
+                    humanControls.style.display = 'grid';
+                    autoControls.style.display = 'none';
+                } else {
+                    title.innerText = 'Review Automated Action Plan';
+                    humanBadge.style.display = 'none';
+                    offerSection.style.display = 'none';
+                    
+                    humanControls.style.display = 'none';
+                    autoControls.style.display = 'block';
+                }
+            }
+        }
+
+        function startExecution() {
+            if (!currentAccount) return;
+            const acc = currentAccount;
+            const isHuman = acc.risk === 'Critical' || acc.risk === 'High';
+
+            if (isHuman) {
+                acc.offerString = document.getElementById('offerEditInput').value;
+                // Rebuild plan to inject edited offer string if they changed it
+                acc.run = buildPlan(acc);
+            }
+
+            // Hide approval, show timeline and controls
+            document.getElementById('actionApprovalSection').style.display = 'none';
+            const timeline = document.getElementById('timelineSection');
+            timeline.classList.remove('hidden');
+            timeline.classList.add('flex');
+            
+            document.getElementById('executionControls').style.display = 'flex';
+            setRunStatus('running');
+
+            setupTimeline(acc);
+            runStep(acc, 0);
+        }
+
+        function setupTimeline(acc) {
+            const plan = acc.run;
+            document.getElementById('agentChannel').innerText = plan.channel;
+            document.getElementById('agentSteps').innerHTML = plan.steps.map((s, i) => `
+                <li class="flex gap-4" id="step${i}">
+                    <div class="flex flex-col items-center">
+                        <div id="icon${i}">${stepIcon('pending')}</div>
+                        ${i < plan.steps.length - 1 ? '<div class="w-px flex-1 bg-gray-200 mt-1"></div>' : ''}
+                    </div>
+                    <div class="flex-1 pb-1 min-w-0">
+                        <p class="font-semibold text-gray-400" id="title${i}">${s.title}</p>
+                        <div id="body${i}"></div>
+                    </div>
+                </li>`).join('');
+        }
+
+        // ---------- Plan Building ----------
+        function buildPlan(acc) {
+            const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+            const city = acc.location.split(',')[0];
+            const order = acc.usualOrder;
+            const lostPerMonth = Math.round(order * (acc.r / 30 + 0.3));
+            const followUp = new Date(); followUp.setDate(followUp.getDate() + (acc.risk === 'Low' ? 14 : 7));
+            const fu = followUp.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            const lateDays = rnd(5, 12);
+
+            const common = {
+                analyse: { title: 'Analyse account history', detail: `Usual gap between orders: <b>${acc.usualGap} days</b>. Silent for <b>${acc.daysSilent} days</b> (${(acc.daysSilent / acc.usualGap).toFixed(1)}× usual gap). Typical order ${fmtR(order)}.` },
+                crm: { title: 'Log interaction in CRM', detail: `Outcome, transcript and next step saved to account ${acc.id}.` },
+                schedule: { title: 'Schedule follow-up', detail: `Rhythm check booked for <b>${fu}</b>. If no order by then, the account is escalated.` }
+            };
+
+            const plans = {
+                'Urgent Win-Back': {
+                    channel: 'Outbound call · rep-assisted', headline: 'Account won back',
+                    steps: [common.analyse,
+                        { title: 'Quantify value at risk', detail: `Estimated lost revenue: <b>${fmtR(lostPerMonth)}/month</b>. Main driver: ${mainDriver(acc).label}.` },
+                        { title: 'Prepare win-back offer', detail: acc.offerString, offer: true },
+                        { title: 'Call account owner', transcript: [
+                            ['agent', `Hi, this is the HEINEKEN team for ${city}. We’ve missed your orders over the last few weeks. Is everything OK on your side?`],
+                            ['client', `Honestly, prices went up and a competitor offered us a better deal.`],
+                            ['agent', `Thanks for telling me. I can take 15% off your next invoice and review your price tier with your rep. Shall I put your usual order in today?`],
+                            ['client', `If it’s 15% off, yes, send the usual.`],
+                            ['agent', `Done. Your usual order is confirmed with 15% off, delivery Thursday. Your rep will call about the price tier.`]] },
+                        { title: 'Place order & apply discount', detail: `Order of ${fmtR(order * 0.85)} placed (after discount). Delivery slot confirmed.` },
+                        common.crm, common.schedule],
+                    outcome: [['Order placed', fmtR(order * 0.85)], ['Discount', '15% on this invoice'], ['Follow-up', fu]], drop: 0.55
+                },
+                'Service & Pricing Intervention': {
+                    channel: 'Outbound call · rep-assisted', headline: 'Service issue resolved',
+                    steps: [common.analyse,
+                        { title: 'Review service history', detail: `2 of last 5 orders delivered late (up to ${lateDays} days). Last review: 1★, “entrega atrasada”.` },
+                        { title: 'Open operations ticket', detail: `Carrier escalation opened for ${city}. Priority delivery slots enabled for this account.` },
+                        { title: 'Prepare service credit & price review', detail: acc.offerString, offer: true },
+                        { title: 'Call account owner', transcript: [
+                            ['agent', `Hi, I’m calling from HEINEKEN. Your last deliveries were late, up to ${lateDays} days. I’m sorry, that’s not acceptable.`],
+                            ['client', `It cost us sales on a weekend. That’s why we stopped ordering.`],
+                            ['agent', `We’ve escalated it with the carrier and given you priority delivery slots. I’ve also added a ${fmtR(order * 0.1)} credit to your account.`],
+                            ['client', `OK. If deliveries are on time, we’ll order again.`],
+                            ['agent', `Great. I can book your usual order for Thursday with a guaranteed slot. Shall I?`],
+                            ['client', `Yes, go ahead.`]] },
+                        { title: 'Place order with guaranteed slot', detail: `Order of ${fmtR(order - order * 0.1)} placed (credit applied). Guaranteed delivery Thursday.` },
+                        common.crm, common.schedule],
+                    outcome: [['Order placed', fmtR(order * 0.9)], ['Service credit', fmtR(order * 0.1)], ['Ops ticket', 'Carrier escalated'], ['Follow-up', fu]], drop: 0.5
+                },
+                'Targeted Category Promo': {
+                    channel: 'WhatsApp promo (Automated)', headline: 'Promo accepted',
+                    steps: [common.analyse,
+                        { title: 'Identify missing category', detail: `${acc.droppedCat} skipped last month; triggers targeted weekly promo.` },
+                        { title: 'Send targeted message', transcript: [
+                            ['agent', `Olá! We noticed you haven't ordered ${acc.droppedCat} recently. It is on promo for you this week. Want it added to your next order?`],
+                            ['client', `Yes, add the usual amount.`],
+                            ['agent', `Done, it’s on your Friday delivery.`]] },
+                        { title: 'Update next order', detail: `${acc.droppedCat} added: +${fmtR(order * 0.2)}.` },
+                        common.crm, common.schedule],
+                    outcome: [['Added to order', fmtR(order * 0.2)], ['Category', acc.droppedCat], ['Follow-up', fu]], drop: 0.4
+                },
+                'Volume & Revenue Check-in': {
+                    channel: 'AI voice check-in (Automated)', headline: 'Volume concern addressed',
+                    steps: [common.analyse,
+                        { title: 'Analyse revenue drop', detail: `Revenue dropped by ~${Math.round((acc.r/30)*70)}%, directly linked to a decrease in overall order volume.` },
+                        { title: 'Call for targeted check-in', transcript: [
+                            ['agent', `Hello, this is the HEINEKEN support team. We noticed your overall order volume and revenue have dipped recently. Is everything OK, or do you need to adjust your usual delivery?`],
+                            ['client', `Things have been a bit slower this month, so we ordered less volume.`],
+                            ['agent', `Understood. I can apply a temporary volume discount to help your margins if you want to keep your usual stock levels. Shall I book your normal volume with a 5% discount?`],
+                            ['client', `That helps, yes. Book the usual volume.`]] },
+                        { title: 'Place adjusted order', detail: `Order of ${fmtR(order * 0.95)} placed (Standard volume, 5% temporary discount).` },
+                        common.crm, common.schedule],
+                    outcome: [['Order placed', fmtR(order * 0.95)], ['Feedback', 'Volume recovered via discount'], ['Follow-up', fu]], drop: 0.45
+                },
+                'Win-Back Bundle': {
+                    channel: 'WhatsApp offer + AI follow-up', headline: 'Dropped category recovered',
+                    steps: [common.analyse,
+                        { title: 'Identify dropped category', detail: `<b>${acc.droppedCat}</b> not ordered for 120+ days (previously bought in 5 of 12 months).` },
+                        { title: 'Generate bundle offer', detail: acc.offerString, offer: true },
+                        { title: 'Send offer via WhatsApp', transcript: [
+                            ['agent', `Olá! Your usual order is due. We’ve prepared it with ${acc.droppedCat} added at 10% off and free delivery. Reply SIM to confirm.`],
+                            ['client', `SIM. Can you add 2 more cases of the usual?`],
+                            ['agent', `Added. Total ${fmtR(order * 1.25)}, delivery Friday. Obrigado!`]] },
+                        { title: 'Place bundled order', detail: `Order of ${fmtR(order * 1.25)} placed, including ${acc.droppedCat}.` },
+                        common.crm, common.schedule],
+                    outcome: [['Order placed', fmtR(order * 1.25)], ['Category recovered', acc.droppedCat], ['Follow-up', fu]], drop: 0.45
+                },
+                'Service Recovery': {
+                    channel: 'AI voice agent → rep hand-off if unhappy', headline: 'Customer recovered',
+                    steps: [common.analyse,
+                        { title: 'Review service history', detail: `Recent late deliveries (up to ${lateDays} days) and two 1–2★ reviews in the last 120 days.` },
+                        { title: 'Open operations ticket', detail: `Fulfilment ticket opened; account flagged for on-time priority.` },
+                        { title: 'Call with apology credit', transcript: [
+                            ['agent', `Hello, this is the HEINEKEN assistant. We saw your recent deliveries were late, and we’re sorry. We’ve added a ${fmtR(order * 0.08)} credit to your account.`],
+                            ['client', `Thanks. The last one arrived after the weekend, which was a problem.`],
+                            ['agent', `Understood. Your next deliveries now have priority. Would you like me to schedule your usual order for Thursday?`],
+                            ['client', `Yes, Thursday works.`]] },
+                        { title: 'Place order', detail: `Order of ${fmtR(order * 0.92)} placed with credit applied.` },
+                        common.crm, common.schedule],
+                    outcome: [['Order placed', fmtR(order * 0.92)], ['Apology credit', fmtR(order * 0.08)], ['Follow-up', fu]], drop: 0.5
+                },
+                'Category Promo': {
+                    channel: 'WhatsApp promo', headline: 'Promo accepted',
+                    steps: [common.analyse,
+                        { title: 'Select promo category', detail: acc.offerString, offer: true },
+                        { title: 'Send promo message', transcript: [
+                            ['agent', `Olá! This week ${acc.droppedCat} is on promo for you. Want it added to your next order?`],
+                            ['client', `Yes, add the usual amount.`],
+                            ['agent', `Done, it’s on your Friday delivery.`]] },
+                        { title: 'Update next order', detail: `${acc.droppedCat} added: +${fmtR(order * 0.2)}.` },
+                        common.crm, common.schedule],
+                    outcome: [['Added to order', fmtR(order * 0.2)], ['Category', acc.droppedCat], ['Follow-up', fu]], drop: 0.4
+                },
+                'Rhythm Check-in': {
+                    channel: 'AI voice check-in', headline: 'Check-in completed',
+                    steps: [common.analyse,
+                        { title: 'Call for rhythm check-in', transcript: [
+                            ['agent', `Hi, this is the HEINEKEN assistant. We noticed your regular order is a bit delayed. How have your recent deliveries been?`],
+                            ['client', `Mostly fine, one was a bit late.`],
+                            ['agent', `Thanks, I’ve noted it for our delivery team. Shall I book your next order for Thursday?`],
+                            ['client', `Yes please.`]] },
+                        { title: 'Place usual order', detail: `Order of ${fmtR(order)} placed.` },
+                        common.crm, common.schedule],
+                    outcome: [['Order placed', fmtR(order)], ['Feedback', 'One late delivery noted'], ['Follow-up', fu]], drop: 0.4
+                },
+                'AI Follow-up Scheduled': {
+                    channel: 'AI voice agent', headline: 'Reorder secured',
+                    steps: [common.analyse,
+                        { title: 'Call ahead of usual order', transcript: [
+                            ['agent', `Hello, this is the HEINEKEN support team. Your usual order cycle is approaching. Is there anything we can help you with today?`],
+                            ['client', `Yes, same as last time please.`],
+                            ['agent', `Confirmed: your usual order for delivery on Thursday.`]] },
+                        { title: 'Place usual order', detail: `Order of ${fmtR(order)} placed.` },
+                        common.crm, common.schedule],
+                    outcome: [['Order placed', fmtR(order)], ['Follow-up', fu]], drop: 0.5
+                }
+            };
+            const plan = plans[acc.actionType] || plans['Rhythm Check-in'];
+            plan.newScore = Math.max(5, Math.round(acc.total * (1 - plan.drop)));
+            return plan;
+        }
+
+        // ---------- Execution Timeline Functions ----------
+        function stepIcon(state) {
+            if (state === 'done') return `<span class="w-7 h-7 rounded-full bg-green-600 text-white flex items-center justify-center shadow-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`;
+            if (state === 'running') return `<span class="w-7 h-7 rounded-full border-2 border-green-600 flex items-center justify-center"><svg class="animate-spin text-green-600" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.2-8.55" stroke-linecap="round"/></svg></span>`;
+            return `<span class="block w-7 h-7 rounded-full border-2 border-gray-200 bg-white"></span>`;
+        }
+
+        function offerCard(acc) {
+            return `<div class="mt-3 p-4 rounded-xl border border-green-200 bg-green-50/60 flex items-center justify-between gap-3">
+                <div><span class="text-[11px] font-bold uppercase tracking-wider text-green-700">Offer generated</span>
+                <p class="text-sm font-semibold text-gray-800">${acc.actionType}</p></div>
+                <span class="text-xs font-bold px-2 py-1 rounded-md ${acc.badgeClass}">Ready</span></div>`;
+        }
+
+        function bubble(who, text) {
+            const agent = who === 'agent';
+            return `<div class="flex ${agent ? 'justify-start' : 'justify-end'} animate-slide-up">
+                <div class="max-w-[85%] px-4 py-2.5 rounded-2xl text-sm ${agent ? 'bg-gray-100 text-gray-800 rounded-bl-md' : 'bg-green-600 text-white rounded-br-md'}">
+                    <span class="block text-[10px] font-bold uppercase tracking-wider mb-0.5 ${agent ? 'text-gray-500' : 'text-green-100'}">${agent ? 'Sales Advisor' : 'Account owner'}</span>${text}
+                </div></div>`;
+        }
+
+        function setRunStatus(state) {
+            const pill = document.getElementById('runStatePill');
+            if (!pill) return;
+            if (state === 'done') {
+                pill.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-green-700 text-white';
+                pill.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Completed`;
+                document.getElementById('skipBtn').classList.add('hidden');
+            } else {
+                pill.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-green-50 text-green-700 border border-green-200';
+                pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Running`;
+            }
+        }
+
+        const wait = (fn, ms) => { if (agentSkip) fn(); else agentTimers.push(setTimeout(fn, ms)); };
+
+        function runStep(acc, i) {
+            const plan = acc.run;
+            if (i >= plan.steps.length) return finishAgent(acc);
+            const s = plan.steps[i];
+            
+            document.getElementById(`icon${i}`).innerHTML = stepIcon('running');
+            document.getElementById(`title${i}`).className = 'font-semibold text-gray-800';
+            const body = document.getElementById(`body${i}`);
+
+            const complete = () => {
+                document.getElementById(`icon${i}`).innerHTML = stepIcon('done');
+                wait(() => runStep(acc, i + 1), 350);
+            };
+
+            if (s.transcript) {
+                body.innerHTML = `<div class="mt-3 p-4 rounded-xl border border-gray-100 bg-white flex flex-col gap-2.5" id="chat${i}"></div>`;
+                const chat = document.getElementById(`chat${i}`);
+                let k = 0;
+                const nextLine = () => {
+                    if (k >= s.transcript.length) return complete();
+                    const [who, text] = s.transcript[k++];
+                    const typing = document.createElement('div');
+                    typing.className = `flex ${who === 'agent' ? 'justify-start' : 'justify-end'}`;
+                    typing.innerHTML = `<div class="typing px-4 py-3 rounded-2xl bg-gray-100 text-gray-500 flex gap-1"><span>●</span><span>●</span><span>●</span></div>`;
+                    if (!agentSkip) chat.appendChild(typing);
+                    wait(() => { typing.remove(); chat.insertAdjacentHTML('beforeend', bubble(who, text)); wait(nextLine, 300); }, 700 + text.length * 12);
+                };
+                nextLine();
+            } else {
+                wait(() => {
+                    body.innerHTML = `<p class="text-sm text-gray-600 mt-1 animate-slide-up">${s.detail}</p>${s.offer ? offerCard(acc) : ''}`;
+                    complete();
+                }, 900);
+            }
+        }
+
+        function skipAgent() {
+            agentSkip = true;
+            agentTimers.forEach(clearTimeout); agentTimers = [];
+            if (currentAccount) finishAgent(currentAccount);
+        }
+
+        function finishAgent(acc) {
+            const plan = acc.run;
+            acc.status = 'Completed';
+            setRunStatus('done');
+            
+            const p = document.getElementById('acctStatusPill');
+            p.className = `status-pill ${statusClass(acc.status)}`;
+            p.innerText = acc.status;
+            
+            document.getElementById('outHeadline').innerText = plan.headline;
+            document.getElementById('outRows').innerHTML = plan.outcome.map(([k, v]) =>
+                `<div class="flex justify-between gap-3"><span class="text-gray-500">${k}</span><span class="font-semibold text-gray-800 text-right">${v}</span></div>`).join('');
+            document.getElementById('outScoreText').innerText = `${acc.total} → ${plan.newScore}`;
+            
+            const card = document.getElementById('outcomeCard'); 
+            card.classList.remove('hidden');
+            
+            const bar = document.getElementById('outScoreBar');
+            bar.style.width = acc.total + '%';
+            requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = plan.newScore + '%'; }));
+            if (window.innerWidth < 1024) card.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
         }
 
         // Initialize App
         document.addEventListener('DOMContentLoaded', () => {
-            // Generate the full dataset of 2,461 items in memory
             generateMassiveDataset();
-            
-            // Render UI
             renderDonutChart();
             renderBarChart();
+            renderLegend();
             renderTable();
         });
     </script>
